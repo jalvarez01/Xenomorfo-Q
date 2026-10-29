@@ -54,6 +54,15 @@ obs, recompensa, terminado, info = env.step(1)
 Acciones: `0` arriba, `1` derecha, `2` abajo, `3` izquierda, `4` revisar casillero.
 Recompensa: `+100` captura, `-1` por paso, `-5` por revisar un casillero vacío.
 
+## Documentación
+
+- [Índice de la documentación](docs/README.md)
+- [Arquitectura](docs/arquitectura.md): visión general, flujo por tick y pipeline de entrenamiento.
+- [Contratos](docs/contratos.md): interfaces entre módulos, actuales y planeadas.
+- [Entorno](docs/entorno.md): mapas, reglas, bot provisional y limitaciones de la versión 0.
+- [Decisiones](docs/decisiones.md): registro de decisiones de diseño.
+- [Guía de desarrollo](docs/guia-desarrollo.md): instalación, ramas, PR y estándar de documentación.
+
 ## Flujo de trabajo
 
 - Ramas: `feature/...`, `fix/...`, `docs/...`.

@@ -1,10 +1,21 @@
+"""Pruebas del entorno mínimo de la estación y de la carga de mapas (T06, T10)."""
 import numpy as np
 import pytest
 
 from sim import EstacionEnv, Mapa
 
 
-def jugar(env, semilla, acciones):
+def jugar(env: EstacionEnv, semilla: int, acciones: list[int]) -> list[tuple]:
+    """Juega una partida con acciones fijas y devuelve el estado tras cada paso.
+
+    Args:
+        env: Entorno a usar.
+        semilla: Semilla para reset().
+        acciones: Acciones a aplicar en orden; se detiene si el episodio termina.
+
+    Returns:
+        Lista de tuplas (alien, tripulante, recompensa, terminado), una por paso.
+    """
     env.reset(semilla)
     pasos = []
     for a in acciones:
@@ -16,11 +27,13 @@ def jugar(env, semilla, acciones):
 
 
 def test_misma_semilla_misma_partida():
+    """Con la misma semilla y las mismas acciones, la partida se repite igual."""
     acciones = [0, 1, 2, 3, 1, 1, 2, 0] * 10
     assert jugar(EstacionEnv(), 7, acciones) == jugar(EstacionEnv(), 7, acciones)
 
 
 def test_observacion_forma_y_tipo():
+    """La observación tiene 4 capas float32, un alien one-hot y creencia que suma 1."""
     env = EstacionEnv()
     obs = env.reset(1)
     assert obs.shape == (4, env.mapa.alto, env.mapa.ancho)
@@ -30,6 +43,7 @@ def test_observacion_forma_y_tipo():
 
 
 def test_no_atraviesa_paredes():
+    """Ni el alienígena ni el tripulante terminan en paredes o casilleros."""
     env = EstacionEnv()
     env.reset(3)
     for _ in range(200):
@@ -39,6 +53,7 @@ def test_no_atraviesa_paredes():
 
 
 def test_captura_da_recompensa_y_termina():
+    """Quedar contiguo al tripulante da 99 (100 - 1) y termina el episodio."""
     env = EstacionEnv()
     env.reset(0)
     env.alien, env.tripulante = (2, 1), (4, 1)
@@ -47,5 +62,6 @@ def test_captura_da_recompensa_y_termina():
 
 
 def test_mapa_invalido():
+    """Un símbolo desconocido en el mapa lanza ValueError."""
     with pytest.raises(ValueError):
         Mapa(["###", "#X#", "###"])
