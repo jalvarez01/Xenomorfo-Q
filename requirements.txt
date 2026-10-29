@@ -1,5 +1,6 @@
-numpy
-torch
-scikit-learn
-matplotlib
-pandas
+numpy>=1.26
+torch>=2.2
+scikit-learn>=1.4
+pandas>=2.2
+matplotlib>=3.8
+pytest>=8.0

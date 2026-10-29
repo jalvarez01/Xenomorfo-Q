@@ -1,1 +1,18 @@
-data/trayectorias/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.ipynb_checkpoints/
+.idea/
+.vscode/
+.DS_Store
+.pytest_cache/
+# Datos y modelos pesados: no se suben a GitHub
+data/trayectorias/*
+!data/trayectorias/.gitkeep
+*.pt
+*.pth
+*.npz
+runs/
+checkpoints/
