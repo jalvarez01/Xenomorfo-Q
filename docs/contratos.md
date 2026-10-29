@@ -68,6 +68,8 @@ predecir(trayectoria: list[tuple[int, int]], mapa) -> np.ndarray  # forma (n_sal
 ```
 
 - Entrada: las últimas 10 posiciones del tripulante.
+- Salida: una probabilidad por sala. `n_salas` viene de `mapa.n_salas`; en vela9 es 8.
+- Las salas son las del archivo de anotación del mapa y se consultan con `Mapa.sala(x, y)` (**existe**). Ver [entorno.md](entorno.md#salas).
 - Etiqueta: sala destino (definición pendiente de confirmar en T15).
 - Modelo guardado en `director/modelos/directora_cnn.pt`, congelado tras T20.
 
@@ -86,5 +88,7 @@ predecir(trayectoria: list[tuple[int, int]], mapa) -> np.ndarray  # forma (n_sal
 
 - Formato CSV o NPZ en `data/trayectorias/` (esa carpeta no se sube a GitHub).
 - Columnas: `partida_id`, `mapa`, `estilo`, `tick`, `x`, `y`, `sala`, `escondido`, `sala_destino`.
+- `sala` sale de `Mapa.sala(x, y)` (índice de 0 a `n_salas - 1`; en vela9, 8 salas). Mientras el tripulante está en una puerta, `sala(x, y)` devuelve `-1` y la columna guarda la última sala visitada. Esa regla se implementa con el dataset en T12.
+- `sala_destino` usa los mismos índices; su definición exacta está pendiente de confirmar en T15.
 - Separación por `partida_id`: 70 % entrenamiento, 15 % validación, 15 % prueba.
 - Los mapas de prueba nunca se ven durante el entrenamiento.

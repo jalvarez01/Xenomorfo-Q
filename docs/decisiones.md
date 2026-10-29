@@ -36,3 +36,10 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Decisión:** el entorno expone `reset(semilla)` y `step(accion)` con la forma de Gym.
 - **Motivo:** fija un contrato estable desde el inicio y permite trabajar en paralelo en la simulación, la directora y el alienígena.
 - **Alternativas descartadas:** usar Gymnasium como dependencia; un bucle de simulación propio sin interfaz fija.
+
+## D6. Las salas se definen con un archivo de anotación por mapa
+
+- **Fecha:** 2026-10-29
+- **Decisión:** cada mapa tiene un archivo `<mapa>_salas.txt` que asigna a mano un índice de sala a cada casilla de piso o casillero. `Mapa` lo valida al cargarlo y expone `sala(x, y)`.
+- **Motivo:** la directora (T15) y la columna `sala_destino` del dataset necesitan salas fijas y con nombre. En `vela9.txt` la fila 5 tiene aberturas sin puerta, así que las salas no se pueden deducir de las puertas.
+- **Alternativas descartadas:** componentes conectadas separadas por puertas (en vela9 da 6 zonas, no 8 salas); agregar puertas al mapa para cerrar las aberturas (cambia la jugabilidad del prototipo).
