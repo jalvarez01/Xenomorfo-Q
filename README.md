@@ -1,70 +1,71 @@
 # Xenomorfo-Q
 
-Un cazador que aprende con Deep Q-Learning y una directora que predice: simulación en cuadrícula inspirada en *Alien: Isolation*.
+Agente directora que responde preguntas sobre una partida de sigilo simulada y actúa sobre ella usando herramientas.
+
 Proyecto final de **SI3003 Inteligencia Artificial**, Universidad EAFIT, 2026-2.
 
-## Idea
+## Integrantes
 
-- **Directora** (aprendizaje supervisado): conoce la posición real del tripulante, predice a qué sala va y le da pistas de zona al alienígena.
-- **Alienígena** (DQN con CNN): caza usando lo que ve, lo que oye y las pistas de la directora.
-- **Experimento:** tasa de captura y tiempo medio en tres casos: sin pistas, pistas por reglas y pistas de la directora.
-
-Técnicas: A*, BFS, filtro bayesiano, árbol de comportamiento, árbol de decisión, CNN y DQN.
-
-## Equipo
-
-| Integrante | Responsabilidad |
+| Integrante | Rol |
 |---|---|
-| Juan José Álvarez | Simulación, bots y dataset |
-| Emmanuel Castaño | Directora (dataset, árbol, CNN, pistas) |
-| Santiago Meneses | Alienígena (reglas, entorno RL, DQN) |
-| Simón | Experimentos, visualización y documento final |
+| Juan José Álvarez | Simulación y funciones de las herramientas |
+| Emmanuel Castaño | Ciclo del agente, configuración del modelo de lenguaje y prompt de sistema |
+| Santiago Meneses | Alienígena por reglas, predicción de destino y avance de la simulación |
+| Simón | Casos de prueba, análisis, notebook de demostración y README final |
 
-## Estructura
+## Problema
 
-```
-sim/           entorno de la estación (mapa, percepción, reglas)
-director/      modelo de la directora y reglas de pistas
-alien/         alienígena por reglas y DQN
-experiments/   protocolo de evaluación y análisis
-data/mapas/    mapas en texto (# pared, . piso, + puerta, L casillero)
-tests/         pruebas con pytest
-docs/          documento final y diagramas
-```
+En un juego de sigilo, la directora conoce la posición real del jugador y decide cuándo ayudar a la criatura que lo persigue. Diseñarla y probarla obliga a revisar la partida a mano: dónde está cada uno, cuántos pasos los separan, si la criatura ya vio al jugador y si conviene darle una pista. Xenomorfo-Q es un agente que responde esas preguntas en español consultando una simulación con herramientas, y que puede dar pistas o avanzar la partida.
 
-## Instalación
+## Opción elegida y por qué
+
+Opción B: agente con herramientas. Las respuestas dependen de un estado que cambia en cada tick y de cálculos como rutas y distancias, no de documentos; un sistema RAG no puede consultar ese estado ni actuar sobre la partida.
+
+## Instrucciones de ejecución
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 pytest
 ```
 
-## Uso del entorno
+Esto funciona hoy y ejecuta las pruebas de la simulación.
 
-```python
-from sim import EstacionEnv
+El agente está en desarrollo; su interfaz está en [docs/contratos.md](docs/contratos.md).
 
-env = EstacionEnv()
-obs = env.reset(semilla=42)          # (4, alto, ancho)
-obs, recompensa, terminado, info = env.step(1)
-```
+## Configuración de la clave
 
-Acciones: `0` arriba, `1` derecha, `2` abajo, `3` izquierda, `4` revisar casillero.
-Recompensa: `+100` captura, `-1` por paso, `-5` por revisar un casillero vacío.
+- En local: copiar `.env.example` a `.env` y completar `NVIDIA_API_KEY`.
+- En Colab: guardar `NVIDIA_API_KEY` en los secretos del notebook.
+- Nunca subir `.env` ni la clave al repositorio.
+
+## Fuentes y herramientas
+
+- Simulación propia en Python y mapa ficticio Vela-9 en [data/mapas/](data/mapas/).
+- Modelo de lenguaje servido por NVIDIA NIM: `meta/llama-3.3-70b-instruct`.
+- El ciclo del agente parte de los notebooks del curso de [Lecture11](https://github.com/EAFIT-IA/si3003-artificial-intelligence/tree/main/notebooks/Lecture11).
+
+## Casos de prueba
+
+Pendiente: se documentan al ejecutar el prototipo (3 habituales, 1 con herramientas, 1 límite y 1 del límite de llamadas).
+
+## Análisis de resultados
+
+Pendiente.
 
 ## Documentación
 
 - [Índice de la documentación](docs/README.md)
-- [Arquitectura](docs/arquitectura.md): visión general, flujo por tick y pipeline de entrenamiento.
-- [Contratos](docs/contratos.md): interfaces entre módulos, actuales y planeadas.
+- [Propuesta](docs/propuesta.md): problema, opción elegida, herramientas, alcance y plan de pruebas.
+- [Arquitectura](docs/arquitectura.md): partes del sistema, flujo de una pregunta y ciclo con límite.
+- [Contratos](docs/contratos.md): interfaces del entorno, las herramientas y el agente.
 - [Entorno](docs/entorno.md): mapas, salas, reglas, bot provisional y limitaciones de la versión 0.
 - [Decisiones](docs/decisiones.md): registro de decisiones de diseño.
-- [Guía de desarrollo](docs/guia-desarrollo.md): instalación, ramas, PR y estándar de documentación.
+- [Guía de desarrollo](docs/guia-desarrollo.md): instalación, ramas, PR, claves de API y estándar de documentación.
 
 ## Flujo de trabajo
 
-- Ramas: `feature/...`, `fix/...`, `docs/...`.
-- Todo entra a `development` por Pull Request con revisión de otro integrante.
+- Las ramas de trabajo (`feature/...`, `fix/...`, `docs/...`) salen de `development`.
+- Todo entra a `development` por Pull Request con la aprobación de otro integrante.
 - Cada integrante hace sus propios commits.

@@ -1,63 +1,69 @@
 # Arquitectura
 
-Xenomorfo-Q tiene cuatro partes. Cada una vive en su propio paquete y se comunica con las demás solo a través de las interfaces de [contratos.md](contratos.md).
+Xenomorfo-Q es un agente con herramientas sobre una simulación propia. El usuario pregunta en español, el modelo de lenguaje decide qué herramientas usar, el ciclo del agente las ejecuta sobre la simulación y el modelo arma la respuesta. El contexto de esta decisión está en [propuesta.md](propuesta.md) y en la decisión D8 de [decisiones.md](decisiones.md).
 
-| Parte | Paquete | Técnica principal | Estado |
-|---|---|---|---|
-| Simulación | `sim/` | Cuadrícula, BFS, bots | Versión 0: movimiento y captura |
-| Directora | `director/` | Aprendizaje supervisado (árbol de decisión y CNN) | Planeada (T15 a T20) |
-| Alienígena | `alien/` | A*, filtro bayesiano, árbol de comportamiento, DQN con CNN | Planeada (T21 a T27) |
-| Experimentos | `experiments/` | Protocolo de evaluación | Planeada (T28 a T33) |
+| Parte | Ubicación | Estado |
+|---|---|---|
+| Simulación | `sim/` | Existe: mapa, salas y entorno. Planeados: visión (T08) y A* (T09). |
+| Herramientas | `director/herramientas.py` | Planeado (T11 a T13). |
+| Agente | `director/agente.py` | Planeado (T14 a T17). |
+| Alienígena por reglas | `alien/` | Planeado (T18, T19). |
+| Casos de prueba y notebook | `experiments/` y notebook | Planeado (T20 a T24). |
 
-## Simulación
+Las interfaces de cada parte están en [contratos.md](contratos.md).
 
-Mapa en cuadrícula de la estación (paredes, piso, puertas y casilleros), un tripulante movido por bots y un entorno tipo Gym que el alienígena usa para actuar. Ver [entorno.md](entorno.md).
-
-## Directora
-
-Conoce la posición real del tripulante. A partir de sus últimas posiciones predice a qué sala se dirige. Esa predicción no llega directo al alienígena: pasa por reglas de pistas que deciden cuándo dar una pista y la convierten en una zona, nunca en la casilla exacta.
-
-## Alienígena
-
-Primero una versión por reglas (A* para moverse, filtro bayesiano para la creencia sobre la posición del tripulante, árbol de comportamiento para decidir) que sirve como línea base. Después un agente DQN con una CNN que recibe la observación de 4 capas.
-
-## Experimentos
-
-Se mide tasa de captura y tiempo medio de captura en tres casos: sin pistas, pistas por reglas y pistas de la directora. Se evalúa en mapas que no se usaron para entrenar.
-
-## Flujo de datos por tick
-
-1. El alienígena elige una acción a partir de la observación.
-2. El entorno mueve al alienígena y luego al tripulante, y revisa si hubo captura.
-3. La percepción produce lo que el alienígena ve y oye; el filtro bayesiano actualiza la creencia.
-4. La directora recibe la posición real del tripulante y predice la sala probable; las reglas de pistas deciden si se entrega una pista.
-5. Se arma la observación de 4 capas (paredes, creencia, alienígena, pista) para el siguiente tick.
-
-En la versión 0 solo existen los pasos 1, 2 y 5; la creencia es uniforme y la capa de pista está en ceros.
+## Flujo de una pregunta
 
 ```mermaid
 flowchart LR
-  T[Tripulante] -->|posición real| DIR[Directora CNN]
-  T -->|vista y ruido| PER[Percepción]
-  PER --> BEL[Creencia: filtro bayesiano]
-  DIR -->|zona probable| REG{Reglas de pistas}
-  REG -->|pista| OBS[Observación 4 capas]
-  BEL --> OBS
-  OBS --> DQN[Alienígena DQN + CNN]
-  DQN -->|acción| ENV[Entorno]
-  ENV --> T
+  U[Usuario] -->|pregunta| M[Modelo de lenguaje]
+  M -->|solicitud de herramienta| C[Ciclo del agente]
+  C -->|ejecuta| H[Herramientas]
+  H -->|consulta u opera| S[Simulación Vela-9]
+  S -->|resultado| H
+  H -->|resultado| C
+  C -->|resultado| M
+  M -->|respuesta final| U
 ```
-
-## Pipeline de entrenamiento
-
-La directora se entrena primero, con datos generados por bots, y se congela. Solo después se entrena el DQN, con la directora fija. El motivo está en [decisiones.md](decisiones.md).
 
 ```mermaid
-flowchart LR
-  B[Bots con estilos] --> TR[Trayectorias]
-  TR --> DS[Dataset separado por partida]
-  DS --> DIR[Directora: árbol / CNN]
-  DIR --> CG[Congelar directora]
-  CG --> DQN[Entrenamiento DQN]
-  DQN --> EV[Evaluación en mapas no vistos]
+sequenceDiagram
+  participant U as Usuario
+  participant C as Ciclo del agente
+  participant M as Modelo de lenguaje
+  participant H as ruta_mas_corta
+  participant S as Simulación
+  U->>C: ¿Cuántos pasos hay del alienígena al tripulante?
+  C->>M: pregunta + esquemas de herramientas
+  M-->>C: llamar ruta_mas_corta("alienigena", "tripulante")
+  C->>H: ejecuta con esos argumentos
+  H->>S: posiciones y A* sobre el mapa
+  S-->>H: camino
+  H-->>C: {pasos, camino_resumido}
+  Note over C: registra la llamada (1 de 6)
+  C->>M: resultado de la herramienta
+  M-->>C: respuesta en texto, sin más llamadas
+  C-->>U: respuesta final
+  Note over C,M: si se llega a 6 llamadas, el modelo responde sin herramientas y lo dice
 ```
+
+## El ciclo del agente
+
+El ciclo se adapta de `run_agent_with_budget` de los notebooks del curso (Lecture11):
+
+1. Envía al modelo el prompt de sistema, la pregunta y los esquemas de las seis herramientas, con temperatura 0.
+2. Si el modelo pide herramientas, el ciclo las ejecuta, registra cada llamada (herramienta, argumentos, resultado) y le devuelve los resultados.
+3. Repite hasta que el modelo responde en texto o se acumulan 6 llamadas.
+4. Al llegar al límite, hace una última llamada sin herramientas: el modelo responde con lo que ya sabe y dice que alcanzó el límite.
+
+El límite evita ciclos largos y costos inesperados, y deja una traza que se puede revisar en los casos de prueba.
+
+## Cómo una pista afecta al alienígena
+
+`dar_pista(sala)` no mueve al alienígena: deja registrada una sala objetivo y descuenta una de las 3 pistas de la partida. En cada tick el alienígena por reglas decide así:
+
+1. Si ve al tripulante, lo persigue.
+2. Si no lo ve y tiene una pista vigente, va hacia esa sala con A*.
+3. Si no, patrulla.
+
+Por eso el efecto de una pista solo se nota al avanzar la simulación con `avanzar_simulacion(ticks)`.
