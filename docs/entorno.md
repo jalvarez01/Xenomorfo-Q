@@ -15,7 +15,102 @@ Los mapas son archivos de texto en `data/mapas/`, un carácter por casilla. Toda
 
 Coordenadas `(x, y)`: `x` es la columna, `y` la fila, con `(0, 0)` en la esquina superior izquierda. Fuera del mapa cuenta como pared.
 
-El mapa por defecto es `data/mapas/vela9.txt` (15 filas por 24 columnas, 8 casilleros).
+El mapa por defecto es `data/mapas/vela9.txt` (15 filas por 24 columnas, 8 casilleros, 8 salas).
+
+## Salas
+
+Las salas no se deducen del mapa: se anotan a mano en un archivo aparte. El motivo está en la decisión D6 de [decisiones.md](decisiones.md): la fila 5 de `vela9.txt` tiene aberturas sin puerta, así que separar por puertas da solo 6 zonas en vez de 8 salas.
+
+### Formato del archivo de salas
+
+- Nombre: `<mapa>_salas.txt` en la misma carpeta del mapa. `Mapa.desde_archivo` lo busca solo; también se puede pasar con `ruta_salas`. Si no existe, el mapa carga sin salas (`n_salas == 0`).
+- Primera línea: `nombres: ` seguido de los nombres separados por comas. El orden define el índice de cada sala.
+- Después, una cuadrícula del mismo tamaño que el mapa:
+  - un dígito (índice de sala) en cada casilla de piso `.` o casillero `L`;
+  - `#` exactamente donde el mapa tiene pared;
+  - `+` exactamente donde el mapa tiene puerta.
+- Como cada sala es un solo dígito, un mapa admite hasta 10 salas.
+
+Reglas que `Mapa` valida al cargar (si alguna falla, lanza `ValueError` con la casilla del problema):
+
+- El tamaño coincide con el del mapa.
+- `#` y `+` están exactamente donde el mapa los tiene.
+- Toda casilla de piso o casillero tiene un dígito.
+- Todo dígito tiene nombre y todo nombre se usa.
+- Cada sala está conectada por sus propias casillas de piso (un BFS que no sale de la sala ni pasa por puertas), y cada casillero toca una casilla de piso de su sala.
+
+Las paredes y las puertas no pertenecen a ninguna sala: `sala(x, y)` devuelve `-1` en ellas y fuera del mapa. Los casilleros pertenecen a la sala en la que están.
+
+### Salas de vela9
+
+| Índice | Sala | Casillas |
+|---|---|---|
+| 0 | Médico | 24 |
+| 1 | Laboratorio | 28 |
+| 2 | Comunicaciones | 28 |
+| 3 | Corredor A | 33 |
+| 4 | Corredor B | 36 |
+| 5 | Bodega | 20 |
+| 6 | Reactor | 36 |
+| 7 | Hangar | 24 |
+
+`data/mapas/vela9_salas.txt`:
+
+```
+nombres: Médico, Laboratorio, Comunicaciones, Corredor A, Corredor B, Bodega, Reactor, Hangar
+########################
+#000000#1111111#2222222#
+#000000#1111111#2222222#
+#000000+1111111+2222222#
+#000000#1111111#2222222#
+###+####333#444####+####
+#3333333333#44444444444#
+#3333333333#44444444444#
+#3333333333#44444444444#
+###+#####+###+######+###
+#55555#666666666#777777#
+#55555#666666666#777777#
+#55555+666666666+777777#
+#55555#666666666#777777#
+########################
+```
+
+Las aberturas de la fila 5 (columnas 8 a 10 y 12 a 14) se asignan a los corredores, no al Laboratorio.
+
+### Ejemplo
+
+```python
+from sim import EstacionEnv, Mapa
+
+m = Mapa.desde_archivo("data/mapas/vela9.txt")
+print("salas:", m.n_salas)
+for i, nombre in enumerate(m.nombres_salas):
+    print(i, nombre, int((m.salas == i).sum()), "casillas")
+print("(1, 1):", m.nombres_salas[m.sala(1, 1)])
+print("(7, 3) puerta:", m.sala(7, 3))
+
+env = EstacionEnv()
+env.reset(semilla=42)
+x, y = env.tripulante
+print("tripulante en", (x, y), "sala:", env.mapa.nombres_salas[env.mapa.sala(x, y)])
+```
+
+Salida:
+
+```
+salas: 8
+0 Médico 24 casillas
+1 Laboratorio 28 casillas
+2 Comunicaciones 28 casillas
+3 Corredor A 33 casillas
+4 Corredor B 36 casillas
+5 Bodega 20 casillas
+6 Reactor 36 casillas
+7 Hangar 24 casillas
+(1, 1): Médico
+(7, 3) puerta: -1
+tripulante en (2, 12) sala: Bodega
+```
 
 ## Reglas
 
