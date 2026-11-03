@@ -1,1 +1,1 @@
-"""Directora: modelo supervisado que predice la sala destino del tripulante y reglas de pistas (T15 a T20)."""
+"""Agente directora: ciclo con modelo de lenguaje y herramientas sobre la simulación (T11 a T17)."""
