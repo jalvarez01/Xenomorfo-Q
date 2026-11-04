@@ -50,3 +50,10 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Decisión:** el límite de `ejecutar_agente` cuenta cada herramienta ejecutada, no cada turno del modelo. Si un turno pide más herramientas de las que quedan, las sobrantes no se ejecutan y reciben un mensaje de no ejecutada.
 - **Motivo:** con llamadas en paralelo, contar por turno permitiría ejecutar muchas más herramientas que el límite (por ejemplo, 6 turnos con 5 herramientas cada uno serían 30 ejecuciones).
 - **Alternativas descartadas:** contar por turno del modelo.
+
+## D10. predecir_destino usa acercamiento ponderado por camino recorrido
+
+- **Fecha:** 2026-11-03
+- **Decisión:** `predecir_destino` (T12) elige la sala con mayor `acercamiento × (acercamiento / d0)` en los últimos 10 ticks, con distancias caminando (BFS) y no en línea recta. La confianza es `acercamiento / ticks`. Detalle en [prediccion.md](prediccion.md).
+- **Motivo:** con el acercamiento puro, al caminar en una dirección siempre gana la sala más lejana en esa dirección, aunque el tripulante ya haya llegado a una más cercana. La distancia en línea recta ignora las paredes y señala salas a las que no se llega por ese lado.
+- **Alternativas descartadas:** acercamiento puro; distancia Manhattan o euclidiana; confianza como fracción del acercamiento total entre salas (se descartó porque en un corredor reparte la confianza entre las salas de adelante aunque el tripulante camine directo); un modelo entrenado (queda como opcional en T31).

@@ -11,6 +11,7 @@ Esta carpeta es la única fuente de documentación técnica de Xenomorfo-Q. Todo
 | [entorno.md](entorno.md) | Formato de mapas, salas, reglas de movimiento y captura, bot provisional y limitaciones actuales. |
 | [decisiones.md](decisiones.md) | Registro de decisiones de diseño con su motivo y las alternativas descartadas. |
 | [guia-desarrollo.md](guia-desarrollo.md) | Instalación, ramas, flujo de Pull Requests, estilo de commits y estándar de documentación. |
+| [prediccion.md](prediccion.md) | Heurística de `predecir_destino` (T12): cómo decide, resultado y limitaciones. |
 
 ## Cómo se mantiene
 
