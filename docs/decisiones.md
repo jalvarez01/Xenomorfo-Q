@@ -55,3 +55,10 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Decisión:** el proyecto pasa a ser un agente directora con modelo de lenguaje y herramientas sobre la simulación existente. Se descartan el DQN, la directora CNN, el dataset de trayectorias y todo entrenamiento guiado por recompensa.
 - **Motivo:** la rúbrica oficial del proyecto exige un prototipo construido alrededor de un modelo de lenguaje. La simulación que ya existe (mapa, salas y entorno) sirve directamente como fuente de datos para las herramientas del agente.
 - **Alternativas descartadas:** RAG, porque las respuestas dependen de un estado que cambia en cada tick y no de documentos; mantener el DQN, porque no cumple la rúbrica y no cabe en el tiempo hasta la sustentación del 2026-11-17.
+
+## D9. El límite de llamadas cuenta herramientas ejecutadas
+
+- **Fecha:** 2026-11-03
+- **Decisión:** el límite de `ejecutar_agente` cuenta cada herramienta ejecutada, no cada turno del modelo. Si un turno pide más herramientas de las que quedan, las sobrantes no se ejecutan y reciben un mensaje de no ejecutada.
+- **Motivo:** con llamadas en paralelo, contar por turno permitiría ejecutar muchas más herramientas que el límite (por ejemplo, 6 turnos con 5 herramientas cada uno serían 30 ejecuciones).
+- **Alternativas descartadas:** contar por turno del modelo.
