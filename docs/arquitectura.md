@@ -6,7 +6,7 @@ Xenomorfo-Q es un agente con herramientas sobre una simulación propia. El usuar
 |---|---|---|
 | Simulación | `sim/` | Existe: mapa, salas y entorno. Planeados: visión (T08) y A* (T09). |
 | Herramientas | `director/herramientas.py` | Planeado (T11 a T13). |
-| Agente | `director/agente.py` | Planeado (T14 a T17). |
+| Agente | `director/agente.py` y `director/llm.py` | Existe (T14, T15, T17). |
 | Alienígena por reglas | `alien/` | Planeado (T18, T19). |
 | Casos de prueba y notebook | `experiments/` y notebook | Planeado (T20 a T24). |
 
@@ -49,12 +49,14 @@ sequenceDiagram
 
 ## El ciclo del agente
 
-El ciclo se adapta de `run_agent_with_budget` de los notebooks del curso (Lecture11):
+El ciclo se adapta de `run_agent_with_budget` de los notebooks del curso (Lecture11) y está en `director/agente.py` (`ejecutar_agente`). El detalle está en [contratos.md](contratos.md#6-agente).
 
 1. Envía al modelo el prompt de sistema, la pregunta y los esquemas de las seis herramientas, con temperatura 0.
-2. Si el modelo pide herramientas, el ciclo las ejecuta, registra cada llamada (herramienta, argumentos, resultado) y le devuelve los resultados.
-3. Repite hasta que el modelo responde en texto o se acumulan 6 llamadas.
+2. Si el modelo pide herramientas, el ciclo las ejecuta, registra cada llamada (herramienta, argumentos, resultado, tiempo y si hubo error) y le devuelve los resultados.
+3. Repite hasta que el modelo responde en texto o se ejecutan 6 herramientas. El límite cuenta herramientas ejecutadas, no turnos del modelo ([D9](decisiones.md#d9-el-límite-de-llamadas-cuenta-herramientas-ejecutadas)): si un turno pide más de las que quedan, las sobrantes no se ejecutan.
 4. Al llegar al límite, hace una última llamada sin herramientas: el modelo responde con lo que ya sabe y dice que alcanzó el límite.
+
+Un error de herramienta (nombre inexistente, argumentos inválidos o una excepción) no rompe el ciclo: llega al modelo como JSON `{"error": ...}` para que pueda corregir.
 
 El límite evita ciclos largos y costos inesperados, y deja una traza que se puede revisar en los casos de prueba.
 
