@@ -92,3 +92,55 @@ predecir(trayectoria: list[tuple[int, int]], mapa) -> np.ndarray  # forma (n_sal
 - `sala_destino` usa los mismos índices; su definición exacta está pendiente de confirmar en T15.
 - Separación por `partida_id`: 70 % entrenamiento, 15 % validación, 15 % prueba.
 - Los mapas de prueba nunca se ven durante el entrenamiento.
+
+## 8. Agente
+
+**Existe**, en `director/agente.py` y `director/llm.py` (T14, T15; pruebas en T17).
+
+```python
+ejecutar_agente(
+    pregunta: str,
+    herramientas: dict[str, Callable[..., Any]],   # nombre -> función de Python
+    esquemas: list[dict],                          # formato "tools" de OpenAI
+    cliente,                                       # objeto con chat.completions.create(**kwargs)
+    modelo: str,
+    prompt_sistema: str,
+    limite: int = 6,
+    temperatura: float = 0.0,
+    *,
+    max_turnos: int | None = None,                 # por defecto limite + 2
+) -> ResultadoAgente
+
+ResultadoAgente(respuesta: str, registro: list[RegistroLlamada], limite_alcanzado: bool, llamadas: int)
+RegistroLlamada(herramienta: str, argumentos: dict, resultado: str, segundos: float, error: bool)
+formatear_registro(registro) -> str
+```
+
+Regla del límite (ver [D9](decisiones.md#d9-el-límite-de-llamadas-cuenta-herramientas-ejecutadas)):
+
+- `limite` cuenta herramientas ejecutadas, no turnos del modelo. Varias `tool_calls` en un turno suman una cada una.
+- Si el límite se agota a mitad de turno, las `tool_calls` restantes no se ejecutan, no cuentan ni entran al registro, pero reciben un mensaje `tool` con `{"error": "No ejecutada: se alcanzó el límite de llamadas"}`.
+- Al agotar el límite, o el tope de turnos `max_turnos`, se hace una última llamada **sin** `tools` pidiendo responder con lo ya obtenido y declarar el límite. El resultado sale con `limite_alcanzado=True`.
+- Los errores nunca rompen el ciclo; llegan al modelo como JSON y quedan en el registro con `error=True`:
+  - herramienta inexistente: `{"error": ..., "herramientas_validas": [...]}` (cuenta como llamada);
+  - argumentos que no son JSON o no corresponden a la firma: `{"error": ...}`;
+  - excepción dentro de la herramienta: `{"error": "<tipo>: <mensaje>"}`.
+- Los resultados que no son `str` se envían con `json.dumps(..., ensure_ascii=False)`.
+
+Contrato para las herramientas (T11, T12): funciones de Python con argumentos por nombre, serializables a JSON, que devuelven `str` o un valor serializable a JSON. Los errores esperables pueden lanzarse como excepción con un mensaje claro; el agente los convierte en JSON.
+
+Configuración del LLM (`director/llm.py`):
+
+| Variable | Por defecto | Uso |
+|---|---|---|
+| `NVIDIA_API_KEY` | (ninguno) | Obligatoria para `crear_cliente`; si falta, lanza `ClaveFaltanteError`. Nunca se sube al repositorio. |
+| `XQ_MODELO` | `meta/llama-3.3-70b-instruct` | Nombre del modelo. |
+| `XQ_URL_BASE` | `https://integrate.api.nvidia.com/v1` | Backend compatible con OpenAI. |
+| `XQ_TEMPERATURA` | `0` | Temperatura; 0 para casos repetibles. |
+
+```python
+config = cargar_config()          # lee el entorno y .env si existe -> ConfigLLM(modelo, url_base, temperatura)
+cliente = crear_cliente(config)   # openai.OpenAI; no hace llamadas de red al crearse
+```
+
+La plantilla de variables está en `.env.example`.
