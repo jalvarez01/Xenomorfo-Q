@@ -1,1 +1,1 @@
-"""Alienígena por reglas (A*, filtro bayesiano, árbol de comportamiento) y agente DQN con CNN (T21 a T27)."""
+"""Alienígena por reglas que reacciona a las pistas de la directora (T18, T19)."""

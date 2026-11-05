@@ -1,18 +1,24 @@
-"""Entorno mínimo de la estación (versión 0, tareas T06 + T10).
+"""Entorno mínimo de la estación (versión 0, tarea T07).
 
-Interfaz tipo Gym acordada en la pestaña 'Contratos':
+Es la simulación que consultan y operan las herramientas del agente directora: la
+partida (posiciones, salas, captura) vive aquí y las herramientas la leen o la hacen
+avanzar.
+
+Interfaz tipo Gym, descrita en docs/contratos.md:
     obs = env.reset(semilla)
     obs, recompensa, terminado, info = env.step(accion)
 
-Versión 0: movimiento y captura. Visión (T07), ruido BFS (T08) y casilleros (T09)
-se agregan después sin cambiar esta interfaz.
+El tensor de observación y la recompensa se conservan del diseño inicial porque no
+estorban y mantienen la interfaz estable, pero el agente no los usa (decisión D8 en
+docs/decisiones.md).
+
+Versión 0: movimiento y captura. La visión (T08), las rutas con A* (T09) y el avance
+con eventos (T10) se agregan después sin cambiar esta interfaz.
 
 Contenido principal:
-    EstacionEnv: el entorno, con el alienígena controlado por el agente y un tripulante
-        movido por un bot provisional.
+    EstacionEnv: el entorno, con el alienígena movido por quien llama a step() y un
+        tripulante movido por un bot provisional.
     Constantes de acciones y recompensas.
-
-El contrato completo está en docs/contratos.md.
 """
 from __future__ import annotations
 
@@ -40,8 +46,9 @@ DIRECCION_INICIAL = (0, 1)
 class EstacionEnv:
     """Entorno de caza en la estación con interfaz tipo Gym.
 
-    El agente controla al alienígena. El tripulante se mueve después de cada acción
-    con un bot provisional. Hay captura cuando la distancia Manhattan entre ambos es
+    Quien llama a step() controla al alienígena; en el diseño actual será el
+    alienígena por reglas (T18). El tripulante se mueve después de cada acción con un
+    bot provisional. Hay captura cuando la distancia Manhattan entre ambos es
     1 o menos.
 
     Args:
@@ -151,7 +158,7 @@ class EstacionEnv:
         if accion < 4:
             self.alien = self._mover(self.alien, accion)
         else:
-            recompensa += R_CASILLERO_VACIO  # T09: revisar casilleros reales
+            recompensa += R_CASILLERO_VACIO  # Los casilleros todavía no esconden a nadie
 
         # Se revisa la captura antes y después de mover al tripulante: si el alienígena
         # llega a su lado, el tripulante no alcanza a escapar en ese mismo tick.
@@ -181,8 +188,7 @@ class EstacionEnv:
         return nueva if self.mapa.es_transitable(*nueva) else pos
 
     def _paso_tripulante(self) -> tuple[int, int]:
-        """Bot provisional: se aleja del alienígena si está cerca; si no, camina al azar.
-        Los bots con estilos llegan en T11."""
+        """Bot provisional: se aleja del alienígena si está cerca; si no, camina al azar."""
         # Quedarse quieto es una opción válida; así nunca se queda sin movimientos.
         opciones = self.mapa.vecinos(*self.tripulante) + [self.tripulante]
         opciones = [c for c in opciones if c != self.alien]
@@ -198,7 +204,8 @@ class EstacionEnv:
 
     def _observacion(self) -> np.ndarray:
         """Tensor (4, alto, ancho): paredes, creencia, alien, pista.
-        Versión 0: creencia uniforme y pista vacía (llegan en T21 y T19)."""
+        Se conserva del diseño inicial con creencia uniforme y pista vacía; el agente no
+        lo usa (D8)."""
         obs = np.zeros((4, self.mapa.alto, self.mapa.ancho), dtype=np.float32)
         obs[0] = self.mapa.paredes
         # 0.5 distingue los casilleros de las paredes sin abrir una capa adicional.
