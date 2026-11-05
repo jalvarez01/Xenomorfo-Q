@@ -128,6 +128,12 @@ def test_casilla_no_transitable(casilla):
         PredictorDestino(LINEA).predecir([(1, 1), casilla])
 
 
+def test_trayectoria_que_salta_casillas():
+    """Si entre dos posiciones seguidas hay más de un paso, da un error claro."""
+    with pytest.raises(ValueError, match="salta"):
+        PredictorDestino(LINEA).predecir([(1, 1), (5, 1)])
+
+
 def test_mapa_sin_salas():
     """Un mapa sin salas no se puede usar para predecir."""
     with pytest.raises(ValueError, match="no tiene salas"):
@@ -157,6 +163,24 @@ def test_vela9_de_medico_a_laboratorio(predictor):
     r = predictor.predecir(trayectoria)
     assert r["sala"] == "Laboratorio"
     assert r["confianza"] >= 0.5
+
+
+@pytest.mark.parametrize("fin", [8, 9, 10, 11, 12, 13, 14])
+def test_vela9_sigue_dentro_del_laboratorio(predictor, fin):
+    """Desde Médico por la fila 3, en cualquier casilla del Laboratorio el destino es él.
+
+    Antes de la regla de llegada, desde (11, 3) ganaban Corredor B y Comunicaciones,
+    las salas que quedan más adelante (revisión del PR #6).
+    """
+    trayectoria = [(x, 3) for x in range(1, fin + 1)]
+    assert predictor.predecir(trayectoria)["sala"] == "Laboratorio"
+
+
+@pytest.mark.parametrize("fin", [7, 8, 9, 10, 11, 12, 13, 14, 15])
+def test_vela9_sigue_dentro_del_reactor(predictor, fin):
+    """Desde Bodega por la fila 12, en cualquier casilla del Reactor el destino es él."""
+    trayectoria = [(x, 12) for x in range(1, fin + 1)]
+    assert predictor.predecir(trayectoria)["sala"] == "Reactor"
 
 
 def test_vela9_baja_del_corredor_a_la_bodega(predictor):

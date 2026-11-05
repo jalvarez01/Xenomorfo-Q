@@ -31,9 +31,13 @@ class PredictorDestino:
       siempre ganaría la sala más lejana del este, aunque el tripulante ya hubiera
       llegado a una más cercana.
 
-    El destino es la sala de mayor puntaje entre las que se acercó. La confianza es
-    acercamiento / ticks: qué tan directo caminó hacia esa sala (1.0 si cada tick lo
-    acercó un paso; baja si se quedó quieto o dio vueltas).
+    Regla de llegada: si el tripulante entró a una sala dentro de la ventana y sigue en
+    ella, esa sala es el destino. Sin esta regla, mientras camina dentro de la sala, las
+    salas de más adelante siguen sumando acercamiento y le ganan.
+
+    Si no aplica la regla de llegada, el destino es la sala de mayor puntaje entre las
+    que se acercó. La confianza es acercamiento / ticks: qué tan directo caminó hacia
+    esa sala (1.0 si cada tick lo acercó un paso; baja si se quedó quieto o dio vueltas).
 
     Args:
         mapa: Mapa con salas (n_salas > 0).
@@ -98,7 +102,8 @@ class PredictorDestino:
                 ticks_analizados: Ticks usados (menos que ventana si la partida es corta).
 
         Raises:
-            ValueError: Si la trayectoria está vacía o tiene una casilla no transitable.
+            ValueError: Si la trayectoria está vacía, tiene una casilla no transitable o
+                salta más de una casilla entre dos posiciones seguidas.
 
         Example:
             >>> m = Mapa(["#######", "#..+..#", "#######"],
@@ -114,10 +119,31 @@ class PredictorDestino:
         for x, y in ventana:
             if not self.mapa.es_transitable(x, y):
                 raise ValueError(f"La casilla {(x, y)} de la trayectoria no es transitable.")
+        # En cada tick el tripulante se mueve a lo sumo una casilla. Si la trayectoria
+        # salta, las distancias no tienen sentido y la confianza podría pasar de 1.
+        for i in range(1, len(ventana)):
+            antes, despues = ventana[i - 1], ventana[i]
+            if abs(antes[0] - despues[0]) + abs(antes[1] - despues[1]) > 1:
+                raise ValueError(
+                    f"La trayectoria salta de {antes} a {despues}: en cada tick el "
+                    f"tripulante se mueve a lo sumo una casilla.")
 
         inicio = ventana[0]
         fin = ventana[-1]
         ticks = len(ventana) - 1
+
+        # Regla de llegada: si entró a una sala dentro de la ventana y sigue en ella,
+        # esa sala es el destino (revisión del PR #6).
+        actual = self.mapa.sala(fin[0], fin[1])
+        if actual != SIN_SALA:
+            d0 = self.distancia(inicio, actual)
+            if d0 is not None and d0 > 0:
+                return {
+                    "sala": self.mapa.nombres_salas[actual],
+                    "confianza": round(d0 / ticks, 2),
+                    "acercamiento_casillas": d0,
+                    "ticks_analizados": ticks,
+                }
 
         mejor_sala = None
         mejor_puntaje = 0.0
