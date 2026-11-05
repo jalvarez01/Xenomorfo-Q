@@ -62,3 +62,10 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Decisión:** el límite de `ejecutar_agente` cuenta cada herramienta ejecutada, no cada turno del modelo. Si un turno pide más herramientas de las que quedan, las sobrantes no se ejecutan y reciben un mensaje de no ejecutada.
 - **Motivo:** con llamadas en paralelo, contar por turno permitiría ejecutar muchas más herramientas que el límite (por ejemplo, 6 turnos con 5 herramientas cada uno serían 30 ejecuciones).
 - **Alternativas descartadas:** contar por turno del modelo.
+
+## D12. Las salas se pasan como texto libre, sin enum
+
+- **Fecha:** 2026-11-05
+- **Decisión:** en los esquemas de `ruta_mas_corta` y `dar_pista`, los parámetros de sala son texto libre. Los nombres válidos van en la descripción, con la instrucción de pasar el nombre tal como lo dijo el usuario.
+- **Motivo:** con enum, el modelo podría reemplazar en silencio una sala inexistente por una válida (por ejemplo, "Enfermería" por "Médico"). Sin enum, la herramienta devuelve el error con las salas válidas y la directora puede sugerir sin inventar (caso de prueba C5).
+- **Alternativas descartadas:** enum estricto con los nombres de sala.

@@ -65,7 +65,7 @@ Una captura en un tick con movimiento da `99.0` (100 - 1).
 
 ## 5. Herramientas del agente (planeado)
 
-Funciones de Python en `director/herramientas.py` (T11) que el modelo de lenguaje puede pedir. Cada una devuelve un diccionario serializable a JSON. Los errores también se devuelven como diccionario `{"error": "<mensaje en español>"}` para que el modelo pueda leerlos y corregir. Los esquemas que ve el modelo se definen en T13.
+Funciones de Python en `director/herramientas.py` (T11) que el modelo de lenguaje puede pedir. Cada una devuelve un diccionario serializable a JSON. Los errores también se devuelven como diccionario `{"error": "<mensaje en español>"}` para que el modelo pueda leerlos y corregir. Los esquemas que ve el modelo están en `director/esquemas.py` (**Existe**, T13): `construir_esquemas(nombres_salas)` y `validar_correspondencia(esquemas, herramientas)`; las salas son texto libre, sin enum (D12).
 
 Responsable general: Juan José Álvarez.
 
@@ -165,9 +165,10 @@ Regla del límite (ver [D9](decisiones.md#d9-el-límite-de-llamadas-cuenta-herra
   - herramienta inexistente: `{"error": ..., "herramientas_validas": [...]}` (cuenta como llamada);
   - argumentos que no son JSON o no corresponden a la firma: `{"error": ...}`;
   - excepción dentro de la herramienta: `{"error": "<tipo>: <mensaje>"}`.
+  - resultado de tipo `dict` con la clave `"error"`: se envía al modelo tal cual y queda en el registro con `error=True`.
 - Los resultados que no son `str` se envían con `json.dumps(..., ensure_ascii=False)`.
 
-Contrato para las herramientas (T11, T12): funciones de Python con argumentos por nombre, serializables a JSON, que devuelven `str` o un valor serializable a JSON. Los errores esperables pueden lanzarse como excepción con un mensaje claro; el agente los convierte en JSON.
+Contrato para las herramientas (T11, T12): funciones de Python con argumentos por nombre, serializables a JSON, que devuelven `str` o un valor serializable a JSON. Para los errores esperables se admiten dos estilos: lanzar una excepción con un mensaje claro (el agente la convierte en JSON) o devolver `{"error": ...}`. En ambos casos el registro queda con `error=True`.
 
 Configuración del LLM (`director/llm.py`):
 
@@ -184,6 +185,19 @@ cliente = crear_cliente(config)   # openai.OpenAI; no hace llamadas de red al cr
 ```
 
 La plantilla de variables está en `.env.example`.
+
+### Prompt de sistema
+
+**Existe**, en `director/prompt.py` (T16).
+
+```python
+construir_prompt_sistema(nombres_salas: list[str], limite: int = 6, pistas_max: int = 3) -> str
+PROMPT_VERSION = "1"
+```
+
+- El texto se genera con las salas del mapa, el límite y las pistas; no lleva esos valores escritos a mano. `limite` debe ser el mismo que se pasa a `ejecutar_agente`.
+- `PROMPT_VERSION` se sube cada vez que cambia la plantilla, y cada caso de prueba (T21) registra la versión usada.
+- Regla de salas inexistentes: el modelo pasa el nombre tal como lo dijo el usuario. Si la herramienta responde que la sala no existe, la directora lo dice, lista las salas válidas y puede preguntar por un nombre parecido, pero no calcula ni inventa una ruta para la sala sugerida hasta que el usuario lo confirme.
 
 ## 7. Dataset
 
