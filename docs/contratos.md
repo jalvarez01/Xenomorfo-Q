@@ -90,11 +90,13 @@ ruta_mas_corta(origen: str, destino: str) -> {"pasos", "camino_resumido"}
 
 ### 5.3 predecir_destino
 
-Responsable: Santiago Meneses (T12).
+Responsable: Santiago Meneses (T12). **En revisión (PR #6, T12).**
 
 ```text
-predecir_destino() -> {"sala", "confianza"}
+predecir_destino() -> {"sala", "confianza", "acercamiento_casillas", "ticks_analizados"}
 ```
+
+- `acercamiento_casillas`: pasos que el tripulante se acercó a la sala estimada en la ventana. `ticks_analizados`: ticks usados (10, o menos al inicio de la partida).
 
 - Heurística sobre los últimos 10 ticks del tripulante (`env.trayectoria`); no es un modelo entrenado.
 - `confianza` va de 0 a 1.
@@ -119,15 +121,17 @@ dar_pista(sala: str) -> {"sala", "pistas_restantes"}
 
 ### 5.6 avanzar_simulacion
 
-Responsable: Santiago Meneses (T10).
+Responsable: Santiago Meneses (T10). **Base existe: `sim/avance.py` (T10); falta la herramienta (T11).** Detalle en [avance.md](avance.md).
 
 ```text
-avanzar_simulacion(ticks: int) -> {"tick", "eventos", "capturado"}
+avanzar_simulacion(ticks: int) -> {"tick", "ticks_avanzados", "eventos", "capturado"}
 ```
 
 - `ticks` va de 1 a 20; fuera de ese rango devuelve un error.
-- `eventos` es una lista de textos cortos (por ejemplo, el alienígena vio al tripulante o cambió de sala).
-- Se detiene antes si hay captura.
+- `ticks_avanzados` es menor que `ticks` si la partida terminó antes.
+- `eventos` es una lista de textos cortos con el formato `"tick N: ..."` (por ejemplo, el alienígena entró a una sala o capturó al tripulante).
+- Se detiene antes si hay captura o si se acaba el tiempo de la partida.
+- La herramienta creará un `Avance(env, politica)` por partida; la política que mueve al alienígena viene de T18.
 
 ## 6. Agente
 

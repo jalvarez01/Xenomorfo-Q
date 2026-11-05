@@ -11,7 +11,7 @@
 | Juan José Álvarez | Simulación y funciones de las herramientas |
 | Emmanuel Castaño | Ciclo del agente, configuración del modelo de lenguaje y prompt de sistema |
 | Santiago Meneses | Alienígena por reglas, predicción de destino y avance de la simulación |
-| Simón | Casos de prueba, análisis, notebook de demostración y README final |
+| Simón Mazo | Casos de prueba, análisis, notebook de demostración y README final |
 
 ## Problema
 
@@ -67,6 +67,8 @@ Las respuestas dependen del estado de la partida, que cambia en cada tick, y de 
 | 1 a 3 | Habituales | Preguntas de una sola herramienta: sala del tripulante, si el alienígena lo ve, ruta entre dos salas. |
 | 4 | Varias herramientas y acción | "¿Hacia dónde va el tripulante? Si el alienígena no lo ve, dale una pista y avanza 10 ticks." |
 | 5 | Límite | Pregunta por una sala que no existe; el agente debe reconocer el error y listar las salas válidas. |
-| 6 | Límite de llamadas | Una pregunta que exige más de 6 llamadas; el agente debe detenerse y decirlo. |
+| 6 | Extra: límite de llamadas | Una pregunta que exige más de 6 llamadas; el agente debe detenerse y decirlo. |
+
+Los casos 1 a 5 son los cinco que pide la rúbrica; el 6 es adicional para mostrar el límite de llamadas.
 
 Por cada caso registramos la pregunta, las herramientas llamadas con sus argumentos y resultados, el número de llamadas, la respuesta final y si fue correcta frente a lo que muestra la simulación.

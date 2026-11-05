@@ -11,7 +11,7 @@ Proyecto final de **SI3003 Inteligencia Artificial**, Universidad EAFIT, 2026-2.
 | Juan José Álvarez | Simulación y funciones de las herramientas |
 | Emmanuel Castaño | Ciclo del agente, configuración del modelo de lenguaje y prompt de sistema |
 | Santiago Meneses | Alienígena por reglas, predicción de destino y avance de la simulación |
-| Simón | Casos de prueba, análisis, notebook de demostración y README final |
+| Simón Mazo | Casos de prueba, análisis, notebook de demostración y README final |
 
 ## Problema
 
