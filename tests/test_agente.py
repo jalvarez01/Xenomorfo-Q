@@ -295,3 +295,43 @@ def test_formatear_registro_recorta_y_marca_errores():
     assert "..." in lineas[0]
     assert len(lineas[0]) < 200
     assert lineas[1].endswith("ERROR")
+
+
+# --- Errores devueltos como dict (contrato 5) -------------------------------------------
+
+
+def test_dict_con_error_se_registra_como_error():
+    """Un dict con la clave "error" queda con error=True, llega intacto y el ciclo sigue."""
+    devuelto = {
+        "error": "La sala 'Enfermería' no existe",
+        "salas_validas": ["Médico", "Hangar"],
+    }
+    herramientas = {"ruta": lambda: devuelto, "sumar": sumar}
+    cliente = ClienteFalso(
+        [pide(("c1", "ruta", {})), pide(("c2", "sumar", {"a": 1, "b": 1})), texto("fin")]
+    )
+    resultado = ejecutar_agente("p", herramientas, [], cliente, MODELO, PROMPT)
+    esperado = json.dumps(devuelto, ensure_ascii=False)
+    assert resultado.registro[0].error is True
+    assert resultado.registro[0].resultado == esperado
+    assert mensajes_tool(cliente.llamadas[1])["c1"] == esperado
+    assert resultado.registro[1].error is False
+    assert resultado.respuesta == "fin"
+
+
+def test_dict_sin_error_no_es_error():
+    """Un dict sin la clave "error" queda con error=False."""
+    herramientas = {"sala": lambda: {"sala": "Hangar"}}
+    cliente = ClienteFalso([pide(("c1", "sala", {})), texto("fin")])
+    resultado = ejecutar_agente("p", herramientas, [], cliente, MODELO, PROMPT)
+    assert resultado.registro[0].error is False
+    assert resultado.registro[0].resultado == '{"sala": "Hangar"}'
+
+
+def test_texto_con_la_palabra_error_no_es_error():
+    """Un str nunca se interpreta como error, aunque contenga la palabra "error"."""
+    herramientas = {"revisar": lambda: "sin error"}
+    cliente = ClienteFalso([pide(("c1", "revisar", {})), texto("fin")])
+    resultado = ejecutar_agente("p", herramientas, [], cliente, MODELO, PROMPT)
+    assert resultado.registro[0].error is False
+    assert resultado.registro[0].resultado == "sin error"
