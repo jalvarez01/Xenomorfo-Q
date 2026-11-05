@@ -40,7 +40,7 @@ Nadie hace push directo a `main` ni a `development`.
 
 Aplica a todo el código nuevo y a cada cambio.
 
-- Cada módulo empieza con un docstring: propósito, contenido principal y tareas relacionadas (T06, T10...).
+- Cada módulo empieza con un docstring: propósito, contenido principal y tareas relacionadas (T07, T09...).
 - Cada clase, método y función pública tiene un docstring estilo Google en español, con `Args`, `Returns`, `Raises` (cuando aplica) y un `Example` corto cuando ayuda.
 - Todas las firmas públicas llevan anotaciones de tipo.
 - Los comentarios en línea explican el porqué (una decisión, una restricción, un truco), nunca repiten lo que hace el código.
@@ -68,9 +68,18 @@ def es_pared(self, x: int, y: int) -> bool:
 
 Los ejemplos de los docstrings se pueden verificar con `python -m pytest --doctest-modules sim`.
 
+## Claves de API
+
+- El agente lee la clave de NVIDIA NIM de la variable de entorno `NVIDIA_API_KEY`.
+- En local: copiar `.env.example` a `.env` y completar la clave. `.env` está en `.gitignore`.
+- En Colab: guardar la clave en los secretos del notebook y no escribirla en ninguna celda.
+- Nunca se sube una clave al repositorio, ni en código, ni en notebooks, ni en commits.
+- Antes de abrir cada PR, correr `git grep -nE "nvapi-[A-Za-z0-9]"` y confirmar que no aparece nada. El patrón busca claves reales (empiezan por `nvapi-`) y no coincide con esta misma línea.
+- Las pruebas nunca llaman a la API real: usan un cliente falso que simula las respuestas del modelo.
+
 ## Lista de revisión del PR
 
 - [ ] Las pruebas pasan (`pytest`).
 - [ ] El código nuevo tiene docstrings, anotaciones de tipo y comentarios según el estándar.
 - [ ] `docs/` está actualizado, en especial `contratos.md` si cambió una interfaz.
-- [ ] No hay datos pesados en el repositorio (trayectorias, modelos `.pt`, `.npz`, carpetas `runs/` o `checkpoints/`).
+- [ ] No hay claves en el repositorio (`git grep -nE "nvapi-[A-Za-z0-9]"` sin resultados) ni archivos `.env`.

@@ -1,1 +1,1 @@
-"""Experimentos: protocolo de evaluación y comparación de los tres casos (T28 a T33)."""
+"""Ejecución y registro de los casos de prueba del agente (T20 a T23)."""

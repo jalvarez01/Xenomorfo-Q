@@ -126,7 +126,7 @@ tripulante en (2, 12) sala: Bodega
 
 ## Bot provisional del tripulante
 
-Mientras llegan los bots con estilos (T11), el tripulante usa un bot simple:
+El tripulante usa un bot simple:
 
 - Opciones: quedarse quieto o moverse a una casilla vecina transitable, sin entrar a la casilla del alienígena.
 - Si el alienígena está a 6 casillas o menos, elige al azar entre las opciones que más lo alejan de él.
@@ -136,11 +136,13 @@ Todas las decisiones aleatorias usan `env.rng`, así que con la misma semilla y 
 
 ## Limitaciones de la versión 0
 
-- Sin visión: el alienígena no tiene línea de vista (T07).
-- Sin ruido: no hay propagación de sonido por BFS (T08).
-- Casilleros no utilizables: el tripulante no se esconde y la acción 4 siempre cuenta como casillero vacío (T09).
-- Creencia uniforme: la capa 1 reparte la probabilidad por igual entre todas las casillas libres (T21).
-- Sin pistas: la capa 3 está en ceros (T19).
+- Sin visión: el alienígena no tiene línea de vista (T08).
+- Sin rutas: no hay cálculo de caminos con A* (T09).
+- Sin avance con eventos: no se puede avanzar varios ticks y obtener un resumen de lo ocurrido (T10).
+- Sin pistas: no existe `dar_pista` (T11) ni la reacción del alienígena a ella (T19).
+- Casilleros no utilizables: el tripulante no se esconde y la acción 4 siempre cuenta como casillero vacío. No está en el plan actual.
+
+La observación de 4 capas y la recompensa se conservan del diseño inicial, pero el agente no las usa (D8). El ejemplo de abajo las muestra porque son parte de la interfaz del entorno.
 
 ## Uso
 
@@ -173,6 +175,6 @@ También se puede pasar otro mapa: `EstacionEnv(mapa="data/mapas/otro.txt")` o `
 ## Cómo extenderlo
 
 - **Mapas nuevos:** agregar un `.txt` en `data/mapas/` con los símbolos de arriba. `Mapa` valida el formato al cargarlo.
-- **Nuevas mecánicas (visión, ruido, casilleros):** se agregan dentro de `EstacionEnv` sin cambiar las firmas de `reset` y `step`. Si hace falta información nueva, va en `info` o en una capa de la observación, y se documenta en [contratos.md](contratos.md).
-- **Bots con estilos:** reemplazan a `_paso_tripulante`; deben usar `self.rng` para seguir siendo reproducibles.
+- **Nuevas mecánicas (visión, avance con eventos):** se agregan dentro de `EstacionEnv` sin cambiar las firmas de `reset` y `step`. Si hace falta información nueva, va en `info` y se documenta en [contratos.md](contratos.md).
+- **Comportamiento del tripulante:** se cambia en `_paso_tripulante`; debe usar `self.rng` para seguir siendo reproducible.
 - Cada cambio de reglas lleva su prueba en `tests/`.

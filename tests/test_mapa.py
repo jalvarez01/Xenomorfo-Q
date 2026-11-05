@@ -1,4 +1,4 @@
-"""Pruebas de las salas explícitas del mapa (T15)."""
+"""Pruebas de las salas explícitas del mapa (T07)."""
 import pytest
 
 from sim import Mapa
@@ -57,19 +57,19 @@ def test_anotacion_valida_minima():
     assert (m.sala(1, 1), m.sala(3, 1), m.sala(5, 1)) == (0, -1, 1)
 
 
-@pytest.mark.parametrize("salas, nombres", [
-    (["#######", "#00+11#"], ["A", "B"]),                    # tamaño distinto
-    (["#######", "#00+11", "#######"], ["A", "B"]),           # fila más corta
-    (["##0####", "#00+11#", "#######"], ["A", "B"]),          # dígito en pared
-    (["#######", "#0.+11#", "#######"], ["A", "B"]),          # falta dígito en piso
-    (["#######", "#00011#", "#######"], ["A", "B"]),          # dígito en puerta
-    (["#######", "#00+12#", "#######"], ["A", "B"]),          # índice sin nombre
-    (["#######", "#00+00#", "#######"], ["A", "B"]),          # sala 1 sin usar
-    (["#######", "#00+11#", "#######"], None),                # sin nombres
+@pytest.mark.parametrize("salas, nombres, motivo", [
+    (["#######", "#00+11#"], ["A", "B"], "debe medir"),                          # tamaño distinto
+    (["#######", "#00+11", "#######"], ["A", "B"], "debe medir"),                 # fila más corta
+    (["##0####", "#00+11#", "#######"], ["A", "B"], "deben coincidir"),           # dígito en pared
+    (["#######", "#0.+11#", "#######"], ["A", "B"], "Falta el índice de sala"),   # falta dígito en piso
+    (["#######", "#00011#", "#######"], ["A", "B"], "deben coincidir"),           # dígito en puerta
+    (["#######", "#00+12#", "#######"], ["A", "B"], "no tiene nombre"),           # índice sin nombre
+    (["#######", "#00+00#", "#######"], ["A", "B"], "no aparecen en la anotación"),  # sala 1 sin usar
+    (["#######", "#00+11#", "#######"], None, "lista de nombres"),                # sin nombres
 ])
-def test_anotacion_invalida(salas, nombres):
+def test_anotacion_invalida(salas, nombres, motivo):
     """Una anotación con tamaño, símbolos, índices o nombres incorrectos lanza ValueError."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=motivo):
         Mapa(MAPA, salas, nombres)
 
 
