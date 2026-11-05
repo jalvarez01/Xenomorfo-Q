@@ -115,8 +115,10 @@ def test_captura_detiene_el_avance():
     """Si hay captura, se detiene antes de completar los ticks pedidos."""
     env = partida(EnvGuionado(), alien=(3, 1), tripulante=(5, 1))
     r = Avance(env, derecha).avanzar(10)
+    # Con la visión activa (T08), al quedar contiguo también lo ve en ese mismo tick.
     assert r == {"tick": 1, "ticks_avanzados": 1,
-                 "eventos": ["tick 1: el alienígena capturó al tripulante"], "capturado": True}
+                 "eventos": ["tick 1: el alienígena vio al tripulante",
+                             "tick 1: el alienígena capturó al tripulante"], "capturado": True}
 
 
 def test_fin_por_tiempo():
