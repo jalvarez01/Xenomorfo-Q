@@ -12,8 +12,9 @@ El tensor de observación y la recompensa se conservan del diseño inicial porqu
 estorban y mantienen la interfaz estable, pero el agente no los usa (decisión D8 en
 docs/decisiones.md).
 
-Versión 0: movimiento y captura. La visión (T08), las rutas con A* (T09) y el avance
-con eventos (T10) se agregan después sin cambiar esta interfaz.
+Versión 0: movimiento, captura y visión del alienígena (T08, sim/percepcion.py), con
+direccion_alien, campo_vision e info["ve_tripulante"]. Las rutas con A* (T09) están en
+sim/rutas.py y el avance con eventos (T10) en sim/avance.py; ninguno cambia esta interfaz.
 
 Contenido principal:
     EstacionEnv: el entorno, con el alienígena movido por quien llama a step() y un

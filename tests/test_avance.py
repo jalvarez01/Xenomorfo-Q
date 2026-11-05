@@ -2,7 +2,7 @@
 
 Contenido principal:
     EnvGuionado: entorno de prueba donde el tripulante sigue un recorrido fijo y la
-        visión del alienígena se lee de una lista (la visión real llega en T08).
+        visión del alienígena se puede fijar con una lista en vez de calcularse (T08).
     Políticas simples del alienígena: siempre a la derecha, quieto y acciones en orden.
 
 Tareas relacionadas: T10 (avance y eventos).
@@ -33,7 +33,7 @@ class EnvGuionado(EstacionEnv):
         recorrido: Casillas a las que se mueve el tripulante, una por tick; cuando se
             acaban, se queda quieto.
         vision: Valor de info["ve_tripulante"] en cada tick (el primero es el tick 1).
-            None para no informar visión, como el entorno actual.
+            None para usar la visión real del entorno.
         max_ticks: Ticks máximos de la partida.
     """
 
@@ -147,8 +147,8 @@ def test_la_vision_se_recuerda_entre_llamadas():
     assert avance.avanzar(2)["eventos"] == ["tick 3: el alienígena perdió de vista al tripulante"]
 
 
-def test_sin_vision_no_hay_eventos_de_vista():
-    """Mientras el entorno no informe ve_tripulante, no se inventan eventos de visión."""
+def test_fuera_de_alcance_no_hay_eventos_de_vista():
+    """Con el tripulante fuera del alcance de la visión, no hay eventos de vista."""
     env = partida(EnvGuionado(), alien=(1, 1), tripulante=(14, 1))
     assert Avance(env, quieto).avanzar(5)["eventos"] == []
 
