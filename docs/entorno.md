@@ -134,11 +134,105 @@ El tripulante usa un bot simple:
 
 Todas las decisiones aleatorias usan `env.rng`, así que con la misma semilla y las mismas acciones la partida se repite igual.
 
+## Visión
+
+Código en `sim/percepcion.py` (T08). Decisión D7 en [decisiones.md](decisiones.md).
+
+El alienígena ve una casilla si se cumple, en este orden:
+
+1. Es su propia casilla: siempre se ve.
+2. Está a más de `ALCANCE_VISION` casillas: no se ve.
+3. Está a menos de `RADIO_CERCANO` casillas: se ve si hay línea de vista, mire hacia donde mire.
+4. En otro caso: debe estar dentro del cono (el coseno entre la dirección del alienígena y la casilla es al menos `COS_MIN_VISION`) y debe haber línea de vista.
+
+| Parámetro | Valor | Significado |
+|---|---|---|
+| `ALCANCE_VISION` | 7.5 casillas (15 m) | Distancia máxima de visión, en línea recta entre centros. |
+| `COS_MIN_VISION` | 0.45 | Semiángulo de unos 63 grados: el cono abarca unos 127 grados. |
+| `RADIO_CERCANO` | 1.5 casillas (3 m) | Por debajo se ve en cualquier dirección; incluye las 8 casillas vecinas. |
+
+Una casilla mide 2 m.
+
+**Qué tapa la vista.** Solo las paredes. Las puertas y los casilleros no tapan. La línea de vista recorre la recta con el algoritmo de Bresenham y revisa las casillas intermedias; el origen y el destino no tapan. Bresenham no es simétrico, así que siempre se calcula desde el alienígena hacia la casilla observada.
+
+**Dirección.** `env.direccion_alien` es `(0, 1)` (hacia abajo) al empezar. Con las acciones 0 a 3 pasa a ser la dirección intentada, aunque choque con una pared: así el alienígena puede girar sin avanzar. Con la acción 4 no cambia.
+
+**En el entorno.** `env.campo_vision` es una matriz booleana `(alto, ancho)` con las casillas que ve; se recalcula en `reset()` y en cada tick, después de mover al alienígena. Nunca marca paredes. `info["ve_tripulante"]` es `True` si la casilla del tripulante está en `campo_vision` al final del tick. Con eso, `Avance` ya registra los eventos "vio al tripulante" y "perdió de vista al tripulante" ([avance.md](avance.md)).
+
+```python
+from sim import EstacionEnv
+from sim.percepcion import linea_de_vista, ve_casilla
+
+env = EstacionEnv()
+env.reset(semilla=42)
+print("alien:", env.alien, "mira hacia:", env.direccion_alien, "tripulante:", env.tripulante)
+print("casillas que ve:", int(env.campo_vision.sum()))
+for accion in (1, 1, 2):
+    _, _, _, info = env.step(accion)
+    print("tick", info["tick"], "alien:", env.alien, "mira hacia:", env.direccion_alien,
+          "ve:", int(env.campo_vision.sum()), "casillas, ve al tripulante:", info["ve_tripulante"])
+print("línea de vista (2, 3) -> (10, 3):", linea_de_vista(env.mapa, (2, 3), (10, 3)))
+print("línea de vista (2, 1) -> (10, 1):", linea_de_vista(env.mapa, (2, 1), (10, 1)))
+print("¿(2, 3) mirando a la derecha ve (6, 3)?", ve_casilla(env.mapa, (2, 3), (1, 0), (6, 3)))
+print("¿y mirando a la izquierda?", ve_casilla(env.mapa, (2, 3), (-1, 0), (6, 3)))
+```
+
+Salida:
+
+```
+alien: (1, 2) mira hacia: (0, 1) tripulante: (2, 12)
+casillas que ve: 15
+tick 1 alien: (1, 2) mira hacia: (1, 0) ve: 29 casillas, ve al tripulante: False
+tick 2 alien: (1, 2) mira hacia: (1, 0) ve: 29 casillas, ve al tripulante: False
+tick 3 alien: (1, 3) mira hacia: (0, 1) ve: 11 casillas, ve al tripulante: False
+línea de vista (2, 3) -> (10, 3): True
+línea de vista (2, 1) -> (10, 1): False
+¿(2, 3) mirando a la derecha ve (6, 3)? True
+¿y mirando a la izquierda? False
+```
+
+En los ticks 1 y 2 el alienígena intenta ir a la derecha, pero el casillero (2, 2) lo bloquea: no se mueve, aunque gira y su campo cambia. La recta de (2, 3) a (10, 3) cruza la puerta (7, 3), que no tapa; la de (2, 1) a (10, 1) choca con la pared (7, 1).
+
+## Rutas con A*
+
+Código en `sim/rutas.py` (T09). Decisión D11 en [decisiones.md](decisiones.md).
+
+- Movimientos en 4 direcciones con costo 1 por paso, sobre piso y puertas (los vecinos de `Mapa.vecinos`). Los casilleros y las paredes no se pisan, ni siquiera como destino.
+- Heurística: distancia Manhattan. Nunca sobreestima con estos movimientos, así que el camino siempre tiene el largo mínimo.
+- Desempate: entre casillas con el mismo `f = g + h` se expande primero la de menor `h`; si siguen empatadas, la que entró antes a la frontera. Los vecinos se generan en el orden arriba, derecha, abajo, izquierda. Así la misma consulta siempre devuelve el mismo camino.
+- `ruta(mapa, origen, destino)` devuelve la lista de casillas de origen a destino, ambos incluidos; `[origen]` si son la misma casilla; `None` si no hay camino. El número de pasos es `len(camino) - 1`.
+- `ruta_a_sala(mapa, origen, sala)` devuelve el camino más corto hasta la casilla transitable más cercana de la sala (índice de 0 a `n_salas - 1`). Usa A* con varias metas y como heurística la menor distancia Manhattan a las casillas de la sala. Si el origen ya está en la sala, devuelve `[origen]`.
+- Errores: `ValueError` con mensaje en español si el origen o el destino están fuera del mapa o no son transitables, si el mapa no tiene salas o si la sala no existe.
+
+```python
+from sim import EstacionEnv
+from sim.rutas import ruta, ruta_a_sala
+
+env = EstacionEnv()
+env.reset(semilla=42)
+camino = ruta(env.mapa, env.alien, env.tripulante)
+print("de", env.alien, "a", env.tripulante, ":", len(camino) - 1, "pasos")
+print("camino:", camino)
+lab = env.mapa.nombres_salas.index("Laboratorio")
+camino = ruta_a_sala(env.mapa, env.alien, lab)
+print("al Laboratorio:", len(camino) - 1, "pasos, termina en", camino[-1])
+print("ya dentro:", ruta_a_sala(env.mapa, (10, 2), lab))
+```
+
+Salida:
+
+```
+de (1, 2) a (2, 12) : 15 pasos
+camino: [(1, 2), (1, 3), (2, 3), (2, 4), (3, 4), (3, 5), (3, 6), (2, 6), (2, 7), (2, 8), (3, 8), (3, 9), (3, 10), (2, 10), (2, 11), (2, 12)]
+al Laboratorio: 8 pasos, termina en (8, 3)
+ya dentro: [(10, 2)]
+```
+
+El camino rodea el casillero (2, 2) y cruza las puertas (3, 5) y (3, 9).
+
 ## Limitaciones de la versión 0
 
-- Sin visión: el alienígena no tiene línea de vista (T08).
-- Sin rutas: no hay cálculo de caminos con A* (T09).
-- Sin avance con eventos: no se puede avanzar varios ticks y obtener un resumen de lo ocurrido (T10).
+- La visión (T08), las rutas con A* (T09) y el avance con eventos (T10) ya existen; ver las secciones de arriba y [avance.md](avance.md).
 - Sin pistas: no existe `dar_pista` (T11) ni la reacción del alienígena a ella (T19).
 - Casilleros no utilizables: el tripulante no se esconde y la acción 4 siempre cuenta como casillero vacío. No está en el plan actual.
 
@@ -167,7 +261,7 @@ Salida:
 ```
 observación: (4, 15, 24) float32
 alien: (1, 2) tripulante: (2, 12)
-fin: {'tick': 50, 'capturado': False, 'distancia_real': 13} recompensa total: -50.0
+fin: {'tick': 50, 'capturado': False, 'distancia_real': 13, 've_tripulante': False} recompensa total: -50.0
 ```
 
 También se puede pasar otro mapa: `EstacionEnv(mapa="data/mapas/otro.txt")` o `EstacionEnv(mapa=Mapa([...]))`.

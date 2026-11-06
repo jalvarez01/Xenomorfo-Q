@@ -48,7 +48,7 @@ La acción 4 no mueve al alienígena, así que sirve como "quedarse quieto" mien
 | `el alienígena capturó al tripulante` | Hubo captura; el avance se detiene en ese tick. |
 | `se acabó el tiempo de la partida (<n> ticks)` | Se llegó a `max_ticks`; el avance se detiene. |
 
-Los eventos de visión se activan solos cuando la visión (T08) agregue `ve_tripulante` a `info`; mientras tanto no se registran. Al crear el `Avance` se asume que el alienígena no ve al tripulante.
+Los eventos de visión están activos: el entorno informa `ve_tripulante` en `info` desde la visión (T08, ver [entorno.md](entorno.md#visión)). Al crear el `Avance` se asume que el alienígena no ve al tripulante.
 
 ## Errores
 
