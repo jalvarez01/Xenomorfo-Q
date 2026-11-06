@@ -11,7 +11,8 @@ Contenido principal:
     Mapa: cuadrícula de la estación con consultas de paredes, casilleros, vecinos y salas.
     DIRS: desplazamientos de las cuatro direcciones, en el mismo orden que las acciones.
 
-Tareas relacionadas: T06 (mapa y entorno mínimo), T15 (salas para la directora).
+Tareas relacionadas: T07 (mapa, salas y entorno). Las rutas con A* (T09) están en
+sim/rutas.py.
 """
 from __future__ import annotations
 

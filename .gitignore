@@ -8,11 +8,3 @@ venv/
 .vscode/
 .DS_Store
 .pytest_cache/
-# Datos y modelos pesados: no se suben a GitHub
-data/trayectorias/*
-!data/trayectorias/.gitkeep
-*.pt
-*.pth
-*.npz
-runs/
-checkpoints/
