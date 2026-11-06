@@ -70,6 +70,13 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Motivo:** con llamadas en paralelo, contar por turno permitiría ejecutar muchas más herramientas que el límite (por ejemplo, 6 turnos con 5 herramientas cada uno serían 30 ejecuciones).
 - **Alternativas descartadas:** contar por turno del modelo.
 
+## D10. predecir_destino usa acercamiento ponderado por camino recorrido
+
+- **Fecha:** 2026-11-03
+- **Decisión:** `predecir_destino` (T12) mira los últimos 10 ticks con distancias caminando (BFS), no en línea recta. Si el tripulante entró a una sala durante la ventana y sigue en ella, esa sala es el destino (regla de llegada). Si no, elige la sala con mayor `acercamiento × (acercamiento / d0)`. La confianza es `acercamiento / ticks`. Detalle en [prediccion.md](prediccion.md).
+- **Motivo:** con el acercamiento puro, al caminar en una dirección siempre gana la sala más lejana en esa dirección, aunque el tripulante ya haya llegado a una más cercana. La fracción recorrida sola no basta: mientras el tripulante camina dentro de la sala a la que llegó, las de más adelante siguen sumando y le ganan (lo encontró la revisión del PR #6, en la fila 3 del Laboratorio). La distancia en línea recta ignora las paredes y señala salas a las que no se llega por ese lado.
+- **Alternativas descartadas:** acercamiento puro; distancia Manhattan o euclidiana; confianza como fracción del acercamiento total entre salas (se descartó porque en un corredor reparte la confianza entre las salas de adelante aunque el tripulante camine directo); un modelo entrenado (queda como opcional en T31).
+
 ## D11. Rutas con A* y heurística Manhattan
 
 - **Fecha:** 2026-11-04
