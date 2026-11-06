@@ -9,8 +9,9 @@ depende del alienígena por reglas (T18), que se conecta después sin cambiar na
 
 Eventos que se registran:
     - El tripulante o el alienígena entra a una sala distinta de la última en que estuvo.
-    - El alienígena empieza a ver al tripulante o lo pierde de vista. Solo si el entorno
-      informa info["ve_tripulante"], que llega con la visión (T08); antes no se registra.
+    - El alienígena empieza a ver al tripulante o lo pierde de vista, según
+      info["ve_tripulante"], que el entorno informa desde la visión (T08). Si un entorno
+      no lo informa, no se registran.
     - Captura del tripulante.
     - Fin de la partida por tiempo (max_ticks).
 
@@ -118,7 +119,7 @@ class Avance:
                 eventos.append(f"tick {tick}: el alienígena entró a {self._nombre(sala)}")
                 self._sala_alien = sala
 
-            # La visión llega en T08; mientras info no la traiga, no hay eventos de vista.
+            # Un entorno sin visión no trae ve_tripulante; en ese caso no hay eventos de vista.
             if "ve_tripulante" in info:
                 ve = bool(info["ve_tripulante"])
                 if ve and not self._ve:

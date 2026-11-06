@@ -4,7 +4,7 @@ Xenomorfo-Q es un agente con herramientas sobre una simulación propia. El usuar
 
 | Parte | Ubicación | Estado |
 |---|---|---|
-| Simulación | `sim/` | Existe: mapa, salas, entorno y avance con eventos (T10). Planeados: visión (T08) y A* (T09). |
+| Simulación | `sim/` | Existe: mapa, salas, entorno, visión (T08), rutas con A* (T09) y avance con eventos (T10). |
 | Herramientas | `director/herramientas.py` | Planeado (T11 a T13). |
 | Agente | `director/agente.py` y `director/llm.py` | Existe (T14, T15, T17). |
 | Alienígena por reglas | `alien/` | Planeado (T18, T19). |

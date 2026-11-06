@@ -12,8 +12,9 @@ El tensor de observación y la recompensa se conservan del diseño inicial porqu
 estorban y mantienen la interfaz estable, pero el agente no los usa (decisión D8 en
 docs/decisiones.md).
 
-Versión 0: movimiento y captura. La visión (T08), las rutas con A* (T09) y el avance
-con eventos (T10) se agregan después sin cambiar esta interfaz.
+Versión 0: movimiento, captura y visión del alienígena (T08, sim/percepcion.py), con
+direccion_alien, campo_vision e info["ve_tripulante"]. Las rutas con A* (T09) están en
+sim/rutas.py y el avance con eventos (T10) en sim/avance.py; ninguno cambia esta interfaz.
 
 Contenido principal:
     EstacionEnv: el entorno, con el alienígena movido por quien llama a step() y un
@@ -27,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 from .mapa import DIRS, Mapa
+from .percepcion import campo_de_vision
 
 # Mapa que se usa cuando no se pasa ninguno. Se resuelve desde la ubicación del paquete
 # para que funcione sin importar el directorio de trabajo.
@@ -38,6 +40,8 @@ N_ACCIONES = 5
 # (empuja a capturar rápido) y R_CASILLERO_VACIO como castigo adicional por revisar
 # un casillero sin nadie.
 R_CAPTURA, R_PASO, R_CASILLERO_VACIO = 100.0, -1.0, -5.0
+# Dirección (dx, dy) en la que mira el alienígena al empezar: hacia abajo (y crece hacia abajo).
+DIRECCION_INICIAL = (0, 1)
 
 
 class EstacionEnv:
@@ -66,6 +70,11 @@ class EstacionEnv:
         tripulante: Posición (x, y) del tripulante.
         tick: Ticks transcurridos en el episodio actual.
         trayectoria: Posiciones del tripulante en el episodio, incluida la inicial.
+        direccion_alien: Hacia dónde mira el alienígena, como (dx, dy) de DIRS. Es
+            (0, 1) al empezar, cambia con las acciones 0 a 3 (aunque choque) y no cambia
+            con la acción 4.
+        campo_vision: Matriz booleana (alto, ancho) con las casillas que ve el
+            alienígena (sim/percepcion.py, T08). Se recalcula en reset() y en cada tick.
 
     Example:
         >>> env = EstacionEnv()
@@ -83,6 +92,8 @@ class EstacionEnv:
         self.alien = self.tripulante = (0, 0)
         self.tick = 0
         self.trayectoria: list[tuple[int, int]] = []
+        self.direccion_alien: tuple[int, int] = DIRECCION_INICIAL
+        self.campo_vision = np.zeros((self.mapa.alto, self.mapa.ancho), dtype=bool)
 
     # ------------------------------------------------------------------ API
     def reset(self, semilla: int | None = None) -> np.ndarray:
@@ -108,6 +119,8 @@ class EstacionEnv:
         self.tripulante = lejos[self.rng.integers(len(lejos))]
         self.tick = 0
         self.trayectoria = [self.tripulante]
+        self.direccion_alien = DIRECCION_INICIAL
+        self.campo_vision = campo_de_vision(self.mapa, self.alien, self.direccion_alien)
         return self._observacion()
 
     def step(self, accion: int) -> tuple[np.ndarray, float, bool, dict]:
@@ -122,7 +135,9 @@ class EstacionEnv:
                 recompensa: R_PASO más R_CAPTURA si hubo captura y R_CASILLERO_VACIO
                     si la acción fue 4.
                 terminado: True si hubo captura o se llegó a max_ticks.
-                info: Diccionario con 'tick', 'capturado' y 'distancia_real'.
+                info: Diccionario con 'tick', 'capturado', 'distancia_real' y
+                    've_tripulante' (si el tripulante está en campo_vision al final
+                    del tick).
 
         Raises:
             ValueError: Si la acción está fuera de 0 a 4.
@@ -131,12 +146,15 @@ class EstacionEnv:
             >>> env = EstacionEnv()
             >>> _ = env.reset(42)
             >>> env.step(1)[1:]
-            (-1.0, False, {'tick': 1, 'capturado': False, 'distancia_real': 10})
+            (-1.0, False, {'tick': 1, 'capturado': False, 'distancia_real': 10, 've_tripulante': False})
         """
         if not 0 <= accion < N_ACCIONES:
             raise ValueError(f"Acción fuera de rango: {accion}")
         self.tick += 1
         recompensa = R_PASO
+        # Mira hacia donde intentó moverse, aunque choque: así se gira sin avanzar.
+        if accion < 4:
+            self.direccion_alien = DIRS[accion]
 
         if accion < 4:
             self.alien = self._mover(self.alien, accion)
@@ -151,11 +169,16 @@ class EstacionEnv:
             self.trayectoria.append(self.tripulante)
             capturado = self._captura()
 
+        # El alienígena ya no se mueve en este tick, así que su campo de visión es final.
+        self.campo_vision = campo_de_vision(self.mapa, self.alien, self.direccion_alien)
+        ve = bool(self.campo_vision[self.tripulante[1], self.tripulante[0]])
+
         if capturado:
             recompensa += R_CAPTURA
         terminado = capturado or self.tick >= self.max_ticks
         info = {"tick": self.tick, "capturado": capturado,
-                "distancia_real": _manhattan(self.alien, self.tripulante)}
+                "distancia_real": _manhattan(self.alien, self.tripulante),
+                "ve_tripulante": ve}
         return self._observacion(), recompensa, terminado, info
 
     # ------------------------------------------------------------- internos

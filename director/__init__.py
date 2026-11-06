@@ -3,11 +3,12 @@
 Contenido principal:
     ejecutar_agente, ResultadoAgente, RegistroLlamada, formatear_registro: ciclo del agente.
     ConfigLLM, cargar_config, crear_cliente, ClaveFaltanteError: configuración del LLM.
+    PredictorDestino: heurística de la herramienta predecir_destino.
     construir_esquemas, validar_correspondencia, NOMBRES_HERRAMIENTAS: esquemas.
     construir_prompt_sistema, PROMPT_VERSION: prompt de sistema.
 
-Tareas relacionadas: T13 (esquemas), T14 (configuración del LLM), T15 (ciclo del
-agente), T16 (prompt de sistema), T17 (pruebas).
+Tareas relacionadas: T12 (predecir_destino), T13 (esquemas), T14 (configuración del
+LLM), T15 (ciclo del agente), T16 (prompt de sistema), T17 (pruebas).
 """
 from director.agente import (
     RegistroLlamada,
@@ -21,6 +22,7 @@ from director.esquemas import (
     validar_correspondencia,
 )
 from director.llm import ClaveFaltanteError, ConfigLLM, cargar_config, crear_cliente
+from director.prediccion import PredictorDestino
 from director.prompt import PROMPT_VERSION, construir_prompt_sistema
 
 __all__ = [
@@ -28,6 +30,7 @@ __all__ = [
     "ConfigLLM",
     "NOMBRES_HERRAMIENTAS",
     "PROMPT_VERSION",
+    "PredictorDestino",
     "RegistroLlamada",
     "ResultadoAgente",
     "cargar_config",
