@@ -158,7 +158,9 @@ def _ejecutar_herramienta(
         valor = funcion(**argumentos)
     except Exception as exc:  # noqa: BLE001 - cualquier fallo se reporta al modelo.
         return registro(_error(f"{type(exc).__name__}: {exc}"), True)
-    return registro(_a_texto(valor), False)
+    # El contrato 5 permite devolver los errores como {"error": ...} en vez de lanzarlos;
+    # el modelo recibe el dict tal cual, pero el registro debe marcarlo como error.
+    return registro(_a_texto(valor), isinstance(valor, dict) and "error" in valor)
 
 
 def _mensaje_asistente(mensaje: Any) -> dict:

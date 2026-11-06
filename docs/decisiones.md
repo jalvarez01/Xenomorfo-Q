@@ -84,3 +84,10 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Motivo:** con costos unitarios y 4 movimientos, la distancia Manhattan nunca sobreestima (es admisible) y cumple la desigualdad triangular (es consistente), así que A* devuelve un camino de largo mínimo y, para un solo destino, expande menos casillas que BFS.
 - **Alternativas descartadas:** BFS para todo (da el mismo resultado pero expande más casillas para un solo destino); Dijkstra (innecesario con costos unitarios, donde equivale a BFS).
 - **Nota:** `PredictorDestino` (PR #6) precalcula con BFS la distancia de todas las casillas a cada sala. Es otra necesidad: muchas consultas sobre el mismo mapa, no un camino entre dos puntos.
+
+## D12. Las salas se pasan como texto libre, sin enum
+
+- **Fecha:** 2026-11-05
+- **Decisión:** en los esquemas de `ruta_mas_corta` y `dar_pista`, los parámetros de sala son texto libre. Los nombres válidos van en la descripción, con la instrucción de pasar el nombre tal como lo dijo el usuario.
+- **Motivo:** con enum, el modelo podría reemplazar en silencio una sala inexistente por una válida (por ejemplo, "Enfermería" por "Médico"). Sin enum, la herramienta devuelve el error con las salas válidas y la directora puede sugerir sin inventar (caso de prueba C5).
+- **Alternativas descartadas:** enum estricto con los nombres de sala.
