@@ -30,9 +30,16 @@ pip install -r requirements.txt
 pytest
 ```
 
-Esto funciona hoy y ejecuta las pruebas de la simulación.
+Las pruebas no llaman a la API real.
 
-El agente está en desarrollo; su interfaz está en [docs/contratos.md](docs/contratos.md).
+Para preguntarle a la directora hace falta la clave (ver "Configuración de la clave"):
+
+```bash
+python -m director "¿En qué sala está el tripulante?" --registro
+python -m director
+```
+
+La primera forma responde una pregunta; con `--registro` muestra también cada llamada a herramienta y el número de llamadas. La segunda abre el modo interactivo sobre una misma partida: `estado` muestra el estado sin usar el modelo y `salir` termina. Las opciones `--semilla` (por defecto 42) y `--limite` (por defecto 6) cambian la partida y el máximo de llamadas. El detalle está en [docs/herramientas.md](docs/herramientas.md).
 
 ## Configuración de la clave
 
@@ -60,6 +67,7 @@ Pendiente.
 - [Propuesta](docs/propuesta.md): problema, opción elegida, herramientas, alcance y plan de pruebas.
 - [Arquitectura](docs/arquitectura.md): partes del sistema, flujo de una pregunta y ciclo con límite.
 - [Contratos](docs/contratos.md): interfaces del entorno, las herramientas y el agente.
+- [Herramientas](docs/herramientas.md): las 6 herramientas, la partida, la directora y el comando `python -m director`.
 - [Entorno](docs/entorno.md): mapas, salas, reglas, bot provisional y limitaciones de la versión 0.
 - [Decisiones](docs/decisiones.md): registro de decisiones de diseño.
 - [Guía de desarrollo](docs/guia-desarrollo.md): instalación, ramas, PR, claves de API y estándar de documentación.

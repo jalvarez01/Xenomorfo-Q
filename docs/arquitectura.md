@@ -5,7 +5,8 @@ Xenomorfo-Q es un agente con herramientas sobre una simulación propia. El usuar
 | Parte | Ubicación | Estado |
 |---|---|---|
 | Simulación | `sim/` | Existe: mapa, salas, entorno, visión (T08), rutas con A* (T09) y avance con eventos (T10). |
-| Herramientas | `director/herramientas.py` | Planeado (T11 a T13). |
+| Herramientas | `director/herramientas.py` y `director/partida.py` | Existe (T11, T13). Ver [herramientas.md](herramientas.md). |
+| Directora y comando | `director/directora.py` y `python -m director` | Existe (T11). Punto de entrada para preguntarle al agente. |
 | Agente | `director/agente.py` y `director/llm.py` | Existe (T14, T15, T17). |
 | Alienígena por reglas | `alien/reglas.py` | Existe (T18, T19). Ver [alien.md](alien.md). |
 | Casos de prueba y notebook | `experiments/` y notebook | Planeado (T20 a T24). |

@@ -65,13 +65,19 @@ Se conserva para la simulación; el agente no usa la observación ni la recompen
 
 Una captura en un tick con movimiento da `99.0` (100 - 1).
 
-## 5. Herramientas del agente (planeado)
+## 5. Herramientas del agente
 
-Funciones de Python en `director/herramientas.py` (T11) que el modelo de lenguaje puede pedir. Cada una devuelve un diccionario serializable a JSON. Los errores también se devuelven como diccionario `{"error": "<mensaje en español>"}` para que el modelo pueda leerlos y corregir. Los esquemas que ve el modelo están en `director/esquemas.py` (**Existe**, T13): `construir_esquemas(nombres_salas)` y `validar_correspondencia(esquemas, herramientas)`; las salas son texto libre, sin enum (D12).
+**Existe (T11)**, en `director/herramientas.py` con `crear_herramientas(partida)`. Detalle, partida y ejemplos en [herramientas.md](herramientas.md).
+
+Funciones de Python que el modelo de lenguaje puede pedir. Cada una devuelve un diccionario serializable a JSON. Los errores también se devuelven como diccionario `{"error": "<mensaje en español>"}` para que el modelo pueda leerlos y corregir. Los esquemas que ve el modelo están en `director/esquemas.py` (**Existe**, T13): `construir_esquemas(nombres_salas)` y `validar_correspondencia(esquemas, herramientas)`; las salas son texto libre, sin enum (D12).
+
+Los nombres de sala se comparan sin mayúsculas, tildes ni espacios repetidos con `Mapa.indice_sala` (D14): "medico" o "corredor a" sirven, pero un nombre distinto no se cambia por uno parecido (D12). Los errores esperables se lanzan como `ValueError` y el agente los convierte en `{"error": ...}`.
 
 Responsable general: Juan José Álvarez.
 
 ### 5.1 estado_partida
+
+**Existe (T11).** Ver [herramientas.md](herramientas.md#las-6-herramientas).
 
 ```text
 estado_partida() -> {"tick", "tripulante": {"x", "y", "sala"}, "alienigena": {"x", "y", "sala", "direccion"}, "pistas_restantes", "capturado"}
@@ -79,22 +85,24 @@ estado_partida() -> {"tick", "tripulante": {"x", "y", "sala"}, "alienigena": {"x
 
 - `sala` es el nombre de la sala (ver [entorno.md](entorno.md#salas)).
 - Si el tripulante o el alienígena está en una puerta, 'sala' es la última sala visitada.
+- `direccion` es "arriba", "derecha", "abajo" o "izquierda".
 
 ### 5.2 ruta_mas_corta
 
-**Base existe: `sim/rutas.py` (T09); falta la herramienta (T11).** Detalle en [entorno.md](entorno.md#rutas-con-a).
+**Existe (T11)**, sobre `sim/rutas.py` (T09). Ver [herramientas.md](herramientas.md#las-6-herramientas) y [entorno.md](entorno.md#rutas-con-a).
 
 ```text
 ruta_mas_corta(origen: str, destino: str) -> {"pasos", "camino_resumido"}
 ```
 
 - `origen` y `destino` son nombres de sala o los valores especiales `"tripulante"` y `"alienigena"`.
-- Calcula la ruta con A* (T09). `camino_resumido` lista las salas y puertas por las que pasa.
+- Calcula la ruta con A* (T09). `camino_resumido` lista las salas por las que pasa, con "puerta" donde cruza una puerta y sin repetidos seguidos.
+- `"alienigena"` también se acepta con tilde y en mayúsculas. De sala a sala, la ruta es la más corta entre cualquier casilla de las dos salas.
 - Si una sala no existe, devuelve un error que lista las salas válidas.
 
 ### 5.3 predecir_destino
 
-Responsable: Santiago Meneses (T12). **En revisión (PR #6, T12).**
+Responsable: Santiago Meneses (T12). **Existe (T11)**, sobre `director/prediccion.py` (T12). Ver [herramientas.md](herramientas.md#las-6-herramientas) y [prediccion.md](prediccion.md).
 
 ```text
 predecir_destino() -> {"sala", "confianza", "acercamiento_casillas", "ticks_analizados"}
@@ -107,15 +115,17 @@ predecir_destino() -> {"sala", "confianza", "acercamiento_casillas", "ticks_anal
 
 ### 5.4 ve_tripulante
 
-**Base existe: `sim/percepcion.py` y `info["ve_tripulante"]` (T08); falta la herramienta (T11).** Detalle en [entorno.md](entorno.md#visión).
+**Existe (T11)**, sobre `sim/percepcion.py` (T08). Ver [herramientas.md](herramientas.md#las-6-herramientas) y [entorno.md](entorno.md#visión).
 
 ```text
 ve_tripulante() -> {"ve", "distancia_casillas"}
 ```
 
-- Usa la visión del alienígena (T08).
+- `ve` es si el tripulante está en `env.campo_vision`; `distancia_casillas`, los pasos de A* del alienígena al tripulante.
 
 ### 5.5 dar_pista
+
+**Existe (T11).** Ver [herramientas.md](herramientas.md#las-6-herramientas).
 
 ```text
 dar_pista(sala: str) -> {"sala", "pistas_restantes"}
@@ -124,11 +134,11 @@ dar_pista(sala: str) -> {"sala", "pistas_restantes"}
 - Máximo 3 pistas por partida.
 - Devuelve un error si no quedan pistas o si la sala no existe.
 - La pista es una sala, nunca una casilla exacta (D2 adaptada en D8).
-- **Base existe:** `AlienReglas.dar_pista(sala)` en `alien/reglas.py` (T19) lleva el presupuesto y devuelve este resultado; la herramienta (T11) solo la llama. Ver la sección 8.
+- **Base existe:** `AlienReglas.dar_pista(sala)` en `alien/reglas.py` (T19) lleva el presupuesto y devuelve este resultado; la herramienta (T11) resuelve el nombre con `Mapa.indice_sala` y la llama con el nombre canónico. Ver la sección 8.
 
 ### 5.6 avanzar_simulacion
 
-Responsable: Santiago Meneses (T10). **Base existe: `sim/avance.py` (T10); falta la herramienta (T11).** Detalle en [avance.md](avance.md).
+Responsable: Santiago Meneses (T10). **Existe (T11)**, sobre `sim/avance.py` (T10). Ver [herramientas.md](herramientas.md#las-6-herramientas) y [avance.md](avance.md).
 
 ```text
 avanzar_simulacion(ticks: int) -> {"tick", "ticks_avanzados", "eventos", "capturado"}
@@ -138,7 +148,7 @@ avanzar_simulacion(ticks: int) -> {"tick", "ticks_avanzados", "eventos", "captur
 - `ticks_avanzados` es menor que `ticks` si la partida terminó antes.
 - `eventos` es una lista de textos cortos con el formato `"tick N: ..."` (por ejemplo, el alienígena entró a una sala o capturó al tripulante).
 - Se detiene antes si hay captura o si se acaba el tiempo de la partida.
-- La herramienta creará un `Avance(env, alien)` por partida, con `alien = AlienReglas(env)` (T18) como política.
+- La partida (`director/partida.py`) crea un `Avance(env, alien)` con `alien = AlienReglas(env)` (T18) como política, y la herramienta lo usa.
 - Si la política tiene un método `tomar_eventos()`, sus eventos se agregan al registro; así llega `"tick N: el alienígena llegó a <sala>, la sala de la pista"`.
 
 ## 6. Agente
