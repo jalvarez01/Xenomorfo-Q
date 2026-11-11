@@ -9,13 +9,15 @@ el mapa tiene pared o puerta. El formato completo está en docs/entorno.md.
 
 Contenido principal:
     Mapa: cuadrícula de la estación con consultas de paredes, casilleros, vecinos y salas.
+    normalizar_nombre: forma de comparación de nombres de sala (sin tildes ni mayúsculas).
     DIRS: desplazamientos de las cuatro direcciones, en el mismo orden que las acciones.
 
-Tareas relacionadas: T07 (mapa, salas y entorno). Las rutas con A* (T09) están en
-sim/rutas.py.
+Tareas relacionadas: T07 (mapa, salas y entorno), T11 (indice_sala para las
+herramientas; decisión D14). Las rutas con A* (T09) están en sim/rutas.py.
 """
 from __future__ import annotations
 
+import unicodedata
 from collections import deque
 from pathlib import Path
 
@@ -225,6 +227,34 @@ class Mapa:
             return SIN_SALA
         return int(self.salas[y, x])
 
+    def indice_sala(self, nombre: str) -> int:
+        """Índice de la sala con ese nombre, sin importar mayúsculas, tildes ni espacios.
+
+        Normaliza, no adivina: "medico", "MÉDICO" y "  corredor   a " encuentran su
+        sala, pero un nombre distinto como "Enfermería" no se cambia por uno parecido
+        (D12 y D14 en docs/decisiones.md).
+
+        Args:
+            nombre: Nombre de la sala tal como lo escribió el usuario.
+
+        Returns:
+            Índice de la sala, de 0 a n_salas - 1.
+
+        Raises:
+            ValueError: Si ninguna sala coincide; el mensaje lista las salas válidas.
+
+        Example:
+            >>> m = Mapa.desde_archivo("data/mapas/vela9.txt")
+            >>> m.indice_sala("medico"), m.indice_sala("  CORREDOR   a ")
+            (0, 3)
+        """
+        buscado = normalizar_nombre(nombre)
+        for indice, candidato in enumerate(self.nombres_salas):
+            if normalizar_nombre(candidato) == buscado:
+                return indice
+        raise ValueError(f"La sala '{nombre}' no existe. Salas válidas: "
+                         f"{', '.join(self.nombres_salas)}.")
+
     # ------------------------------------------------------------- internos
     def _cargar_salas(self, filas_salas: list[str], nombres_salas: list[str] | None) -> None:
         """Valida la anotación de salas y llena salas, nombres_salas y n_salas.
@@ -306,6 +336,27 @@ class Mapa:
                 raise ValueError(
                     f"El casillero en ({cx}, {cy}) de la sala {indice} ({nombre}) no toca "
                     f"ninguna casilla de piso de su sala.")
+
+
+def normalizar_nombre(nombre: str) -> str:
+    """Forma de comparación de un nombre: sin tildes, en minúscula y con espacios simples.
+
+    Descompone con NFD y quita las marcas combinadas, así "Médico" y "medico" quedan
+    iguales. La ñ también pierde la virgulilla; en estos nombres no causa ambigüedad.
+
+    Args:
+        nombre: Texto a normalizar.
+
+    Returns:
+        Texto normalizado.
+
+    Example:
+        >>> normalizar_nombre("  Corredor   Á ")
+        'corredor a'
+    """
+    descompuesto = unicodedata.normalize("NFD", str(nombre))
+    sin_marcas = "".join(c for c in descompuesto if not unicodedata.combining(c))
+    return " ".join(sin_marcas.casefold().split())
 
 
 def _leer_filas(ruta: Path) -> list[str]:
