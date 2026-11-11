@@ -91,3 +91,10 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Decisión:** en los esquemas de `ruta_mas_corta` y `dar_pista`, los parámetros de sala son texto libre. Los nombres válidos van en la descripción, con la instrucción de pasar el nombre tal como lo dijo el usuario.
 - **Motivo:** con enum, el modelo podría reemplazar en silencio una sala inexistente por una válida (por ejemplo, "Enfermería" por "Médico"). Sin enum, la herramienta devuelve el error con las salas válidas y la directora puede sugerir sin inventar (caso de prueba C5).
 - **Alternativas descartadas:** enum estricto con los nombres de sala.
+
+## D13. El alienígena por reglas busca donde lo vio y va al centro de las salas
+
+- **Fecha:** 2026-11-11
+- **Decisión:** al árbol de T18 (perseguir, pista, patrullar) se le agrega una regla entre perseguir y la pista: si perdió de vista al tripulante, va a la última casilla donde lo vio. Las pistas y la patrulla apuntan al centro de cada sala (la casilla transitable más cercana al promedio de la sala), y la patrulla va siempre al centro más cercano que no haya visitado en la vuelta. Detalle en [alien.md](alien.md).
+- **Motivo:** sin la última casilla vista, el alienígena abandonaba la caza en cuanto el tripulante salía del cono, aunque estuviera a dos pasos. Ir al centro, y no a la primera casilla de la sala, lo hace entrar de verdad a la sala y ver la mayor parte de ella. En vela9 captura en 18 de 20 partidas (semillas 0 a 19).
+- **Alternativas descartadas:** usar la posición real del tripulante sin verlo (sería trampa: esa información es de la directora); patrullar las salas en el orden de sus índices (en vela9 cruza el mapa de lado a lado entre Comunicaciones y Corredor A); patrulla al azar (los casos de prueba dejan de ser repetibles).
