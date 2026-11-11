@@ -12,6 +12,8 @@ Eventos que se registran:
     - El alienígena empieza a ver al tripulante o lo pierde de vista, según
       info["ve_tripulante"], que el entorno informa desde la visión (T08). Si un entorno
       no lo informa, no se registran.
+    - Eventos propios de la política, si tiene un método tomar_eventos(). El alienígena
+      por reglas (alien/reglas.py) informa así cuándo llega a la sala de una pista.
     - Captura del tripulante.
     - Fin de la partida por tiempo (max_ticks).
 
@@ -127,6 +129,13 @@ class Avance:
                 if not ve and self._ve:
                     eventos.append(f"tick {tick}: el alienígena perdió de vista al tripulante")
                 self._ve = ve
+
+            # La política puede tener eventos propios, como la llegada a la sala de una
+            # pista (AlienReglas, T19). Una función simple no tiene tomar_eventos: se salta.
+            tomar_eventos = getattr(self.politica, "tomar_eventos", None)
+            if tomar_eventos is not None:
+                for texto in tomar_eventos():
+                    eventos.append(f"tick {tick}: {texto}")
 
             if info["capturado"]:
                 capturado = True
