@@ -15,14 +15,14 @@ env = EstacionEnv()
 env.reset(semilla=42)
 avance = Avance(env, siempre_derecha)   # uno por partida, después de reset()
 avance.avanzar(10)
-# {'tick': 10, 'ticks_avanzados': 10, 'eventos': [...], 'capturado': False}
+# {'tick': 10, 'ticks_avanzados': 10, 'eventos': [], 'capturado': False}
 ```
 
 La herramienta de T11 crea un `Avance` por partida y llama a `avanzar(ticks)` con el número que pida el modelo.
 
 ## Quién mueve al alienígena
 
-`Avance` recibe una **política**: una función que recibe el entorno y devuelve la acción del alienígena (0 arriba, 1 derecha, 2 abajo, 3 izquierda, 4 revisar casillero). Así T10 no depende del alienígena por reglas: hoy las pruebas usan políticas simples, y cuando exista T18 se pasa su función sin cambiar este módulo.
+`Avance` recibe una **política**: una función que recibe el entorno y devuelve la acción del alienígena (0 arriba, 1 derecha, 2 abajo, 3 izquierda, 4 revisar casillero). Así T10 no depende del alienígena por reglas: las pruebas usan políticas simples, y en la partida real se pasa `AlienReglas(env)` ([alien.md](alien.md), T18).
 
 La acción 4 no mueve al alienígena, así que sirve como "quedarse quieto" mientras no haya otra opción.
 
@@ -45,6 +45,7 @@ La acción 4 no mueve al alienígena, así que sirve como "quedarse quieto" mien
 | `el alienígena entró a <sala>` | Igual, para el alienígena. |
 | `el alienígena vio al tripulante` | `info["ve_tripulante"]` pasa a True. |
 | `el alienígena perdió de vista al tripulante` | `info["ve_tripulante"]` pasa a False. |
+| `el alienígena llegó a <sala>, la sala de la pista` | El alienígena por reglas llega al centro de la sala de una pista (ver "Eventos de la política"). |
 | `el alienígena capturó al tripulante` | Hubo captura; el avance se detiene en ese tick. |
 | `se acabó el tiempo de la partida (<n> ticks)` | Se llegó a `max_ticks`; el avance se detiene. |
 
@@ -59,7 +60,6 @@ Los eventos de visión están activos: el entorno informa `ve_tripulante` en `in
 
 El agente convierte esas excepciones en `{"error": ...}` para el modelo (sección Agente de [contratos.md](contratos.md)).
 
-## Pendiente
+## Eventos de la política
 
-- Evento de pista: cuando exista `dar_pista` (T11) y la reacción del alienígena (T19), por ejemplo "el alienígena llegó a la sala de la pista".
-- Conectar la política del alienígena por reglas (T18).
+Si la política tiene un método `tomar_eventos()`, `Avance` lo llama en cada tick y agrega lo que devuelva con el prefijo del tick. `AlienReglas` lo usa para informar la llegada a la sala de una pista: `"tick N: el alienígena llegó a <sala>, la sala de la pista"`. Una función simple no tiene ese método y no pasa nada.

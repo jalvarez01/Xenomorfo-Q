@@ -7,7 +7,7 @@ Xenomorfo-Q es un agente con herramientas sobre una simulación propia. El usuar
 | Simulación | `sim/` | Existe: mapa, salas, entorno, visión (T08), rutas con A* (T09) y avance con eventos (T10). |
 | Herramientas | `director/herramientas.py` | Planeado (T11 a T13). |
 | Agente | `director/agente.py` y `director/llm.py` | Existe (T14, T15, T17). |
-| Alienígena por reglas | `alien/` | Planeado (T18, T19). |
+| Alienígena por reglas | `alien/reglas.py` | Existe (T18, T19). Ver [alien.md](alien.md). |
 | Casos de prueba y notebook | `experiments/` y notebook | Planeado (T20 a T24). |
 
 Las interfaces de cada parte están en [contratos.md](contratos.md).
@@ -65,7 +65,10 @@ El límite evita ciclos largos y costos inesperados, y deja una traza que se pue
 `dar_pista(sala)` no mueve al alienígena: deja registrada una sala objetivo y descuenta una de las 3 pistas de la partida. En cada tick el alienígena por reglas decide así:
 
 1. Si ve al tripulante, lo persigue.
-2. Si no lo ve y tiene una pista vigente, va hacia esa sala con A*.
-3. Si no, patrulla.
+2. Si lo perdió de vista, va a la última casilla donde lo vio.
+3. Si no lo ve y tiene una pista vigente, va al centro de esa sala con A*. Al llegar, la pista se cumple.
+4. Si no, patrulla los centros de las salas.
+
+El detalle está en [alien.md](alien.md) (`alien/reglas.py`, T18 y T19).
 
 Por eso el efecto de una pista solo se nota al avanzar la simulación con `avanzar_simulacion(ticks)`.

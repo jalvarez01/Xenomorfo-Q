@@ -21,7 +21,7 @@ obs, recompensa, terminado, info = env.step(accion)
 - `info` hoy: `{"tick", "capturado", "distancia_real", "ve_tripulante"}`. `ve_tripulante` es `True` si el tripulante está en el campo de visión del alienígena al final del tick.
 - Atributos de visión (T08): `direccion_alien`, la dirección `(dx, dy)` hacia la que mira el alienígena (`(0, 1)` al empezar; cambia con las acciones 0 a 3 aunque choque y no cambia con la 4), y `campo_vision`, matriz booleana `(alto, ancho)` con las casillas que ve, recalculada en `reset()` y en cada tick.
 - Funciones públicas para T11 y T18: en `sim/percepcion.py`, `linea_de_vista(mapa, origen, destino)`, `ve_casilla(mapa, pos, direccion, casilla)` y `campo_de_vision(mapa, pos, direccion)`; en `sim/rutas.py`, `ruta(mapa, origen, destino)` y `ruta_a_sala(mapa, origen, sala)`, que devuelven la lista de casillas (pasos = `len(camino) - 1`) o `None` si no hay camino. Reglas en [entorno.md](entorno.md#visión) y [entorno.md](entorno.md#rutas-con-a).
-- **Planeado:** agregar a `info` las claves `estado_arbol` (estado del alienígena por reglas: persigue, va a la sala de la pista o patrulla) y `pista_activa` (si hay una pista vigente).
+- El estado del alienígena por reglas y la pista vigente no van en `info`: son atributos de `AlienReglas` (`estado` y `pista_activa`), ver la sección 8.
 
 ## 2. Acciones
 
@@ -123,7 +123,8 @@ dar_pista(sala: str) -> {"sala", "pistas_restantes"}
 
 - Máximo 3 pistas por partida.
 - Devuelve un error si no quedan pistas o si la sala no existe.
-- La pista es una sala, nunca una casilla exacta (D2 adaptada en D8). El alienígena reacciona a ella en T19.
+- La pista es una sala, nunca una casilla exacta (D2 adaptada en D8).
+- **Base existe:** `AlienReglas.dar_pista(sala)` en `alien/reglas.py` (T19) lleva el presupuesto y devuelve este resultado; la herramienta (T11) solo la llama. Ver la sección 8.
 
 ### 5.6 avanzar_simulacion
 
@@ -137,7 +138,8 @@ avanzar_simulacion(ticks: int) -> {"tick", "ticks_avanzados", "eventos", "captur
 - `ticks_avanzados` es menor que `ticks` si la partida terminó antes.
 - `eventos` es una lista de textos cortos con el formato `"tick N: ..."` (por ejemplo, el alienígena entró a una sala o capturó al tripulante).
 - Se detiene antes si hay captura o si se acaba el tiempo de la partida.
-- La herramienta creará un `Avance(env, politica)` por partida; la política que mueve al alienígena viene de T18.
+- La herramienta creará un `Avance(env, alien)` por partida, con `alien = AlienReglas(env)` (T18) como política.
+- Si la política tiene un método `tomar_eventos()`, sus eventos se agregan al registro; así llega `"tick N: el alienígena llegó a <sala>, la sala de la pista"`.
 
 ## 6. Agente
 
@@ -208,3 +210,22 @@ PROMPT_VERSION = "1"
 ## 7. Dataset
 
 **Descartado (D8).** El agente consulta la simulación en vivo con sus herramientas, así que no se generan trayectorias ni se entrena ningún modelo.
+
+## 8. Alienígena por reglas
+
+**Existe**, en `alien/reglas.py` (T18, T19). Responsable: Santiago Meneses. Detalle en [alien.md](alien.md).
+
+```python
+alien = AlienReglas(env)            # uno por partida, después de env.reset()
+accion = alien.decidir()            # o alien(env): sirve como política de Avance
+alien.dar_pista(sala: str) -> {"sala", "pistas_restantes"}
+alien.tomar_eventos() -> list[str]  # eventos desde la última llamada; Avance los usa
+alien.estado                        # "persigue", "va a la pista" o "patrulla"
+alien.pista_activa                  # nombre de la sala de la pista vigente, o None
+alien.pistas_restantes              # de 3 a 0
+```
+
+- Reglas, en orden: si ve al tripulante lo persigue; si lo perdió de vista va a la última casilla donde lo vio; si hay pista va al centro de esa sala; si no, patrulla los centros de las salas. Se mueve con `ruta` (A*, T09).
+- Solo usa la posición del tripulante cuando está en `env.campo_vision`.
+- `dar_pista` lanza `ValueError` si no quedan pistas o la sala no existe (con la lista de salas válidas), sin gastar la pista. El nombre se compara sin mayúsculas ni espacios en los extremos.
+- Requiere un mapa con salas; si no tiene, `AlienReglas(env)` lanza `ValueError`.
