@@ -233,7 +233,7 @@ El camino rodea el casillero (2, 2) y cruza las puertas (3, 5) y (3, 9).
 ## Limitaciones de la versión 0
 
 - La visión (T08), las rutas con A* (T09) y el avance con eventos (T10) ya existen; ver las secciones de arriba y [avance.md](avance.md).
-- Pistas: el alienígena por reglas ya reacciona a ellas ([alien.md](alien.md), T19); falta la herramienta `dar_pista` del agente (T11).
+- Pistas: el alienígena por reglas reacciona a ellas ([alien.md](alien.md), T19) y la directora las da con la herramienta `dar_pista` ([herramientas.md](herramientas.md), T11).
 - Casilleros no utilizables: el tripulante no se esconde y la acción 4 siempre cuenta como casillero vacío. No está en el plan actual.
 
 La observación de 4 capas y la recompensa se conservan del diseño inicial, pero el agente no las usa (D8). El ejemplo de abajo las muestra porque son parte de la interfaz del entorno.

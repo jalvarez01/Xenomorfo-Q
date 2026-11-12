@@ -98,3 +98,10 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Decisión:** al árbol de T18 (perseguir, pista, patrullar) se le agrega una regla entre perseguir y la pista: si perdió de vista al tripulante, va a la última casilla donde lo vio. Las pistas y la patrulla apuntan al centro de cada sala (la casilla transitable más cercana al promedio de la sala), y la patrulla va siempre al centro más cercano que no haya visitado en la vuelta. Detalle en [alien.md](alien.md).
 - **Motivo:** sin la última casilla vista, el alienígena abandonaba la caza en cuanto el tripulante salía del cono, aunque estuviera a dos pasos. Ir al centro, y no a la primera casilla de la sala, lo hace entrar de verdad a la sala y ver la mayor parte de ella. En vela9 captura en 18 de 20 partidas (semillas 0 a 19).
 - **Alternativas descartadas:** usar la posición real del tripulante sin verlo (sería trampa: esa información es de la directora); patrullar las salas en el orden de sus índices (en vela9 cruza el mapa de lado a lado entre Comunicaciones y Corredor A); patrulla al azar (los casos de prueba dejan de ser repetibles).
+
+## D14. Los nombres de sala se comparan sin mayúsculas ni tildes
+
+- **Fecha:** 2026-11-11
+- **Decisión:** las herramientas (T11) buscan las salas con `Mapa.indice_sala`, que compara sin mayúsculas, sin tildes (NFD sin marcas combinadas) y con los espacios repetidos reducidos a uno. Las funciones internas reciben siempre el nombre canónico del mapa. Detalle en [herramientas.md](herramientas.md).
+- **Motivo:** los usuarios escriben "medico" o "corredor a", y el modelo pasa el nombre tal como lo dijo el usuario (D12). Normalizar no es corregir: "medico" es Médico escrito sin tilde, mientras que "Enfermería" sigue siendo una sala inexistente, así que D12 se mantiene.
+- **Alternativas descartadas:** coincidencia exacta (falla con "medico", que es un nombre válido escrito sin tilde); coincidencia aproximada por similitud (cambiaría "Enfermería" por otra sala, justo lo que D12 evita).

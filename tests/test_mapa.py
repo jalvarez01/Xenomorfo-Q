@@ -111,3 +111,28 @@ def test_archivo_de_salas_sin_nombres(tmp_path):
     (tmp_path / "chico_salas.txt").write_text("\n".join(SALAS) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="nombres:"):
         Mapa.desde_archivo(ruta)
+
+
+# --- indice_sala (T11, D14) --------------------------------------------------------------
+
+
+@pytest.mark.parametrize("nombre, esperado", [
+    ("Médico", 0), ("medico", 0), ("MÉDICO", 0), ("  medico  ", 0),
+    ("corredor a", 3), ("CORREDOR   A", 3), ("Corredor  B", 4), ("hangar", 7),
+])
+def test_indice_sala_sin_mayusculas_tildes_ni_espacios(vela9, nombre, esperado):
+    """indice_sala encuentra la sala sin importar mayúsculas, tildes ni espacios repetidos."""
+    assert vela9.indice_sala(nombre) == esperado
+
+
+@pytest.mark.parametrize("nombre", ["Enfermería", "Medic", "Corredor", "", "Corredor C"])
+def test_indice_sala_no_adivina(vela9, nombre):
+    """Un nombre que no es el de una sala da ValueError con las salas válidas, sin corregirlo."""
+    with pytest.raises(ValueError, match="no existe. Salas válidas: Médico, Laboratorio"):
+        vela9.indice_sala(nombre)
+
+
+def test_indice_sala_coincide_con_cada_nombre(vela9):
+    """Cada nombre de sala, tal cual, devuelve su propio índice."""
+    for indice, nombre in enumerate(vela9.nombres_salas):
+        assert vela9.indice_sala(nombre) == indice
