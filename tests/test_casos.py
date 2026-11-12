@@ -10,6 +10,7 @@ import pytest
 
 from director import llm
 from director.llm import ConfigLLM
+from director.partida import Partida
 from experiments import casos
 from experiments.casos import CASOS, calcular_esperado, ejecutar_casos
 from tests.test_directora import ClienteFalso, pide, texto
@@ -42,10 +43,35 @@ def guion() -> list:
 
 
 def test_seis_casos_definidos():
-    """Hay 6 casos con id, categoría, pregunta y herramientas esperadas."""
+    """Hay 6 casos con id, categoría, pregunta y herramientas esperadas; solo C3 se prepara."""
     assert [c["id"] for c in CASOS] == ["C1", "C2", "C3", "C4", "C5", "C6"]
     for caso in CASOS:
-        assert set(caso) == {"id", "categoria", "pregunta", "herramientas_esperadas"}
+        assert {"id", "categoria", "pregunta", "herramientas_esperadas"} <= set(caso)
+        assert set(caso) - {"id", "categoria", "pregunta", "herramientas_esperadas"} <= {"preparacion"}
+    assert [c["id"] for c in CASOS if "preparacion" in c] == ["C3"]
+
+
+def test_preparacion_de_c3_es_la_de_la_busqueda():
+    """La preparación guardada en C3 es la primera que encuentra buscar_preparacion."""
+    c3 = next(c for c in CASOS if c["id"] == "C3")
+    assert casos.buscar_preparacion() == c3["preparacion"] == {"semilla": 0, "ticks": 11}
+
+
+def test_c3_ya_no_es_trivial():
+    """Después de la preparación, C3 predice otra sala con confianza de al menos 0.5."""
+    esperado = calcular_esperado("C3")
+    assert esperado["ticks_analizados"] == 10
+    assert esperado["confianza"] >= casos.CONFIANZA_MIN_C3
+    assert esperado["sala"] != esperado["sala_actual_tripulante"]
+    assert (esperado["sala"], esperado["sala_actual_tripulante"]) == ("Hangar", "Corredor B")
+
+
+def test_preparar_partida_avanza_en_tramos():
+    """preparar_partida avanza más de 20 ticks en tramos y no hace nada con 0."""
+    partida = Partida(semilla=0)
+    assert casos.preparar_partida(partida, 0) is None and partida.env.tick == 0
+    resultado = casos.preparar_partida(partida, 25)
+    assert partida.env.tick == 25 and resultado["capturado"] is False
 
 
 def test_esperados_coinciden_con_las_herramientas():
@@ -70,12 +96,15 @@ def test_escribe_json_y_markdown_con_todos_los_campos(tmp_path):
     assert set(informe) == {"fecha", "prompt_version", "modelo", "temperatura", "semilla",
                             "limite", "casos"}
     assert informe["modelo"] == ConfigLLM().modelo and informe["semilla"] == 42
-    campos = {"id", "categoria", "pregunta", "herramientas_esperadas", "resultado_esperado",
+    campos = {"id", "categoria", "pregunta", "herramientas_esperadas", "semilla_caso", "resultado_esperado",
               "respuesta", "llamadas", "numero_llamadas", "limite_alcanzado",
               "latencia_segundos", "valoracion", "correcto"}
     for caso in informe["casos"]:
-        assert set(caso) == campos
+        assert set(caso) - {"preparacion"} == campos
         assert caso["valoracion"] == "" and caso["correcto"] is None
+    c3 = informe["casos"][2]
+    assert c3["preparacion"] == {"semilla": 0, "ticks": 11} and c3["semilla_caso"] == 0
+    assert informe["casos"][0]["semilla_caso"] == 42
     c1 = informe["casos"][0]
     assert [ll["herramienta"] for ll in c1["llamadas"]] == ["estado_partida", "ruta_mas_corta"]
     assert json.loads(c1["llamadas"][1]["resultado"])["pasos"] == 15
@@ -84,6 +113,7 @@ def test_escribe_json_y_markdown_con_todos_los_campos(tmp_path):
     for caso in CASOS:
         assert f"## {caso['id']}" in md and caso["pregunta"] in md
     assert "**Valoración:** (pendiente)" in md
+    assert "preparada avanzando 11 ticks" in md
 
 
 def test_la_clave_nunca_aparece(tmp_path):
@@ -100,6 +130,18 @@ def test_comando_sin_clave(monkeypatch, tmp_path, capsys):
     assert casos.main(["--salida", str(tmp_path)]) == casos.CODIGO_SIN_CLAVE
     assert "NVIDIA_API_KEY" in capsys.readouterr().err
     assert list(tmp_path.iterdir()) == []
+
+
+def test_la_directora_pregunta_sobre_la_partida_preparada(tmp_path):
+    """En C3 la directora ve el mismo estado preparado que el valor esperado."""
+    guion_c3 = [pide("p1", "predecir_destino", {}), texto("Va al Hangar.")]
+    caso = next(c for c in CASOS if c["id"] == "C3")
+    ruta_json, _ = ejecutar_casos(salida=tmp_path, cliente=ClienteFalso(guion_c3),
+                                  config=ConfigLLM(), casos=[caso])
+    c3 = json.loads(ruta_json.read_text(encoding="utf-8"))["casos"][0]
+    obtenido = json.loads(c3["llamadas"][0]["resultado"])
+    assert obtenido["sala"] == c3["resultado_esperado"]["sala"] == "Hangar"
+    assert obtenido["ticks_analizados"] == 10
 
 
 def test_comando_con_cliente_falso(monkeypatch, tmp_path, capsys):
