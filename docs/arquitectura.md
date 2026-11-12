@@ -9,7 +9,8 @@ Xenomorfo-Q es un agente con herramientas sobre una simulación propia. El usuar
 | Directora y comando | `director/directora.py` y `python -m director` | Existe (T11). Punto de entrada para preguntarle al agente. |
 | Agente | `director/agente.py` y `director/llm.py` | Existe (T14, T15, T17). |
 | Alienígena por reglas | `alien/reglas.py` | Existe (T18, T19). Ver [alien.md](alien.md). |
-| Casos de prueba y notebook | `experiments/` y notebook | Planeado (T20 a T24). |
+| Casos de prueba | `experiments/casos.py` y `python -m experiments.casos` | Existe el ejecutor (apoyo a T21). Ver [casos.md](casos.md). Valoración y análisis: T22 y T23. |
+| Notebook de demostración | `notebooks/demo_directora.ipynb` | En revisión (T24). |
 
 Las interfaces de cada parte están en [contratos.md](contratos.md).
 
