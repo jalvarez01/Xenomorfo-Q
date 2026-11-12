@@ -41,6 +41,8 @@ python -m director
 
 La primera forma responde una pregunta; con `--registro` muestra también cada llamada a herramienta y el número de llamadas. La segunda abre el modo interactivo sobre una misma partida: `estado` muestra el estado sin usar el modelo y `salir` termina. Las opciones `--semilla` (por defecto 42) y `--limite` (por defecto 6) cambian la partida y el máximo de llamadas. El detalle está en [docs/herramientas.md](docs/herramientas.md).
 
+Notebook de demostración: [notebooks/demo_directora.ipynb](notebooks/demo_directora.ipynb). Funciona en local (con `.env`) y en Colab (con el secreto `NVIDIA_API_KEY`); muestra las herramientas sin el modelo, cuatro preguntas con su registro de llamadas y qué pasa al llegar al límite.
+
 ## Configuración de la clave
 
 - En local: copiar `.env.example` a `.env` y completar `NVIDIA_API_KEY`.
