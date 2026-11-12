@@ -15,6 +15,7 @@ Esta carpeta es la única fuente de documentación técnica de Xenomorfo-Q. Todo
 | [decisiones.md](decisiones.md) | Registro de decisiones de diseño con su motivo y las alternativas descartadas. |
 | [guia-desarrollo.md](guia-desarrollo.md) | Instalación, ramas, flujo de Pull Requests, estilo de commits y estándar de documentación. |
 | [herramientas.md](herramientas.md) | Las 6 herramientas (T11), la partida que consultan, la directora y el comando `python -m director`. |
+| [casos.md](casos.md) | Ejecutor de los 6 casos de prueba (apoyo a T21): uso, valores esperados y archivos de evidencia. |
 | [prediccion.md](prediccion.md) | Heurística de `predecir_destino` (T12): cómo decide, resultado y limitaciones. |
 
 ## Cómo se mantiene
