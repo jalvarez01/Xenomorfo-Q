@@ -78,9 +78,9 @@ python -m panel --semilla 7 --puerto 8080 --abrir
 
 Escucha solo en `127.0.0.1`, no usa nada de internet salvo la llamada al modelo desde el servidor, y la clave nunca llega al navegador. Sin clave, el mapa y el juego funcionan y el chat muestra el mismo mensaje de configuración que `python -m director`.
 
-![Panel en modo observar, semilla 42](docs/img/panel.png)
+![Panel en modo Tú después de unos movimientos, semilla 42, a 1440x900](docs/img/panel.png)
 
-Después de preguntar C4 en el chat, el mapa muestra la pista hacia Bodega y el avance de 10 ticks: [captura del chat](docs/img/panel_chat.png).
+A 1440x900 y a 1366x768 la caja de pregunta y la respuesta más reciente quedan al lado del mapa sin desplazar la página; el historial se desplaza dentro del panel del chat. Después de preguntar C4 en el chat, el mapa muestra la pista hacia Bodega y el avance de 10 ticks: [captura del chat](docs/img/panel_chat.png). La respuesta de esa captura salió parcial (no comparó la distancia antes y después), la misma variación de C4 que se describe en el análisis.
 
 ## Configuración de la clave
 
