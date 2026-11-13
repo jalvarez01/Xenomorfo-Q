@@ -70,7 +70,7 @@ Los ejemplos de los docstrings se pueden verificar con `python -m pytest --docte
 
 ## Claves de API
 
-- El agente lee la clave de NVIDIA NIM de la variable de entorno `NVIDIA_API_KEY`.
+- El agente lee `OPENAI_API_KEY` para `XQ_PROVEEDOR=openai` o `NVIDIA_API_KEY` para `XQ_PROVEEDOR=nvidia`.
 - En local: copiar `.env.example` a `.env` y completar la clave. `.env` está en `.gitignore`.
 - En Colab: guardar la clave en los secretos del notebook y no escribirla en ninguna celda.
 - Nunca se sube una clave al repositorio, ni en código, ni en notebooks, ni en commits.

@@ -1,0 +1,39 @@
+{
+  "fecha": "2026-11-12",
+  "prompt_version": "1",
+  "modelo": "gpt-5.4-nano",
+  "temperatura": 0.0,
+  "semilla": 42,
+  "limite": 6,
+  "casos": [
+    {
+      "id": "C3",
+      "categoria": "habitual",
+      "pregunta": "¿Hacia qué sala se dirige el tripulante?",
+      "herramientas_esperadas": [
+        "predecir_destino"
+      ],
+      "resultado_esperado": {
+        "sala": "Bodega",
+        "confianza": 0.0,
+        "acercamiento_casillas": 0,
+        "ticks_analizados": 0
+      },
+      "respuesta": "El tripulante parece dirigirse a **Bodega**.\n\n- **Confianza:** 0.0  \n- **Acercamiento a esa sala:** 0 casillas  \n- **Ticks analizados:** 0",
+      "llamadas": [
+        {
+          "herramienta": "predecir_destino",
+          "argumentos": {},
+          "resultado": "{\"sala\": \"Bodega\", \"confianza\": 0.0, \"acercamiento_casillas\": 0, \"ticks_analizados\": 0}",
+          "segundos": 0.0003,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 1,
+      "limite_alcanzado": false,
+      "latencia_segundos": 1.859,
+      "valoracion": "",
+      "correcto": null
+    }
+  ]
+}

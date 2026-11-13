@@ -11,7 +11,8 @@ import pytest
 
 from director import llm
 
-VARIABLES = (llm.VAR_CLAVE, llm.VAR_MODELO, llm.VAR_URL_BASE, llm.VAR_TEMPERATURA)
+VARIABLES = (llm.VAR_CLAVE, llm.VAR_CLAVE_OPENAI, llm.VAR_PROVEEDOR,
+             llm.VAR_MODELO, llm.VAR_URL_BASE, llm.VAR_TEMPERATURA)
 
 
 @pytest.fixture(autouse=True)
@@ -71,3 +72,29 @@ def test_crear_cliente_usa_la_url_base(monkeypatch):
     monkeypatch.setenv(llm.VAR_CLAVE, "clave-ficticia-de-prueba")
     cliente = llm.crear_cliente(llm.ConfigLLM(url_base="http://localhost:9/v1"))
     assert str(cliente.base_url).rstrip("/") == "http://localhost:9/v1"
+
+
+def test_openai_configura_modelo_url_y_clave_correctos(monkeypatch):
+    monkeypatch.setenv(llm.VAR_PROVEEDOR, "openai")
+    monkeypatch.setenv(llm.VAR_CLAVE_OPENAI, "clave-openai-ficticia")
+    monkeypatch.setenv(llm.VAR_CLAVE, "clave-nvidia-ficticia")
+    config = llm.cargar_config()
+    assert config.proveedor == "openai"
+    assert config.modelo == "gpt-5.4-nano"
+    assert config.url_base == "https://api.openai.com/v1"
+    cliente = llm.crear_cliente(config)
+    assert cliente.api_key == "clave-openai-ficticia"
+    assert str(cliente.base_url).rstrip("/") == config.url_base
+
+
+def test_openai_no_usa_clave_nvidia(monkeypatch):
+    monkeypatch.setenv(llm.VAR_PROVEEDOR, "openai")
+    monkeypatch.setenv(llm.VAR_CLAVE, "clave-nvidia-ficticia")
+    with pytest.raises(llm.ClaveFaltanteError, match="OPENAI_API_KEY"):
+        llm.crear_cliente()
+
+
+def test_proveedor_invalido_no_se_ignora(monkeypatch):
+    monkeypatch.setenv(llm.VAR_PROVEEDOR, "otro")
+    with pytest.raises(ValueError, match="XQ_PROVEEDOR"):
+        llm.cargar_config()

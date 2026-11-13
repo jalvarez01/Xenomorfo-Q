@@ -1,0 +1,37 @@
+{
+  "fecha": "2026-11-12",
+  "prompt_version": "1",
+  "modelo": "gpt-5.4-nano",
+  "temperatura": 0.0,
+  "semilla": 42,
+  "limite": 6,
+  "casos": [
+    {
+      "id": "C2",
+      "categoria": "habitual",
+      "pregunta": "¿El alienígena está viendo al tripulante en este momento?",
+      "herramientas_esperadas": [
+        "ve_tripulante"
+      ],
+      "resultado_esperado": {
+        "ve": false,
+        "distancia_casillas": 15
+      },
+      "respuesta": "No. En este momento el alienígena **no** está viendo al tripulante.  \nDistancia actual: **15 casillas**.",
+      "llamadas": [
+        {
+          "herramienta": "ve_tripulante",
+          "argumentos": {},
+          "resultado": "{\"ve\": false, \"distancia_casillas\": 15}",
+          "segundos": 0.0004,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 1,
+      "limite_alcanzado": false,
+      "latencia_segundos": 1.989,
+      "valoracion": "",
+      "correcto": null
+    }
+  ]
+}

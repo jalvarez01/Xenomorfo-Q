@@ -1,0 +1,45 @@
+{
+  "fecha": "2026-11-12",
+  "prompt_version": "1",
+  "modelo": "gpt-5.4-nano",
+  "temperatura": 0.0,
+  "semilla": 42,
+  "limite": 6,
+  "casos": [
+    {
+      "id": "C1",
+      "categoria": "habitual",
+      "pregunta": "¿En qué sala está el tripulante y a cuántos pasos está el alienígena?",
+      "herramientas_esperadas": [
+        "estado_partida",
+        "ruta_mas_corta"
+      ],
+      "resultado_esperado": {
+        "sala_tripulante": "Bodega",
+        "pasos_alienigena_tripulante": 15
+      },
+      "respuesta": "El tripulante está en **Bodega**.  \nEl alienígena está a **15 pasos/casillas** del tripulante (distancia: **15 casillas**).",
+      "llamadas": [
+        {
+          "herramienta": "estado_partida",
+          "argumentos": {},
+          "resultado": "{\"tick\": 0, \"tripulante\": {\"x\": 2, \"y\": 12, \"sala\": \"Bodega\"}, \"alienigena\": {\"x\": 1, \"y\": 2, \"sala\": \"Médico\", \"direccion\": \"abajo\"}, \"pistas_restantes\": 3, \"capturado\": false}",
+          "segundos": 0.0012,
+          "error": false
+        },
+        {
+          "herramienta": "ve_tripulante",
+          "argumentos": {},
+          "resultado": "{\"ve\": false, \"distancia_casillas\": 15}",
+          "segundos": 0.001,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 2,
+      "limite_alcanzado": false,
+      "latencia_segundos": 2.364,
+      "valoracion": "",
+      "correcto": null
+    }
+  ]
+}

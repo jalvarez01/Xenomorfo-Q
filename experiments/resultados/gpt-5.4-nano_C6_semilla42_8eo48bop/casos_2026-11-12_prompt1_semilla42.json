@@ -1,0 +1,97 @@
+{
+  "fecha": "2026-11-12",
+  "prompt_version": "1",
+  "modelo": "gpt-5.4-nano",
+  "temperatura": 0.0,
+  "semilla": 42,
+  "limite": 6,
+  "casos": [
+    {
+      "id": "C6",
+      "categoria": "extra: límite de llamadas",
+      "pregunta": "Calcula la distancia del alienígena a cada una de las 8 salas.",
+      "herramientas_esperadas": [
+        "ruta_mas_corta"
+      ],
+      "resultado_esperado": {
+        "pasos_por_sala": {
+          "Médico": 0,
+          "Laboratorio": 8,
+          "Comunicaciones": 16,
+          "Corredor A": 6,
+          "Corredor B": 14,
+          "Bodega": 12,
+          "Reactor": 16,
+          "Hangar": 26
+        },
+        "llamadas_necesarias": 8,
+        "limite_alcanzado": true
+      },
+      "respuesta": "Con la información ya obtenida:\n\n- Médico: 0 casillas (camino: [\"Médico\"])\n- Laboratorio: 8 casillas (camino: [\"Médico\", \"puerta\", \"Laboratorio\"])\n- Comunicaciones: 16 casillas (camino: [\"Médico\", \"puerta\", \"Laboratorio\", \"puerta\", \"Comunicaciones\"])\n- Corredor A: 6 casillas (camino: [\"Médico\", \"puerta\", \"Corredor A\"])\n- Corredor B: 14 casillas (camino: [\"Médico\", \"puerta\", \"Laboratorio\", \"Corredor B\"])\n\nNo pude calcular las distancias a:\n- Bodega\n- Reactor\n- Hangar\n\nporque alcanzé el límite de llamadas a herramientas en esta pregunta (las 3 últimas rutas no se ejecutaron).",
+      "llamadas": [
+        {
+          "herramienta": "estado_partida",
+          "argumentos": {},
+          "resultado": "{\"tick\": 0, \"tripulante\": {\"x\": 2, \"y\": 12, \"sala\": \"Bodega\"}, \"alienigena\": {\"x\": 1, \"y\": 2, \"sala\": \"Médico\", \"direccion\": \"abajo\"}, \"pistas_restantes\": 3, \"capturado\": false}",
+          "segundos": 0.0002,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Médico"
+          },
+          "resultado": "{\"pasos\": 0, \"camino_resumido\": [\"Médico\"]}",
+          "segundos": 0.002,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Laboratorio"
+          },
+          "resultado": "{\"pasos\": 8, \"camino_resumido\": [\"Médico\", \"puerta\", \"Laboratorio\"]}",
+          "segundos": 0.0006,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Comunicaciones"
+          },
+          "resultado": "{\"pasos\": 16, \"camino_resumido\": [\"Médico\", \"puerta\", \"Laboratorio\", \"puerta\", \"Comunicaciones\"]}",
+          "segundos": 0.0008,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Corredor A"
+          },
+          "resultado": "{\"pasos\": 6, \"camino_resumido\": [\"Médico\", \"puerta\", \"Corredor A\"]}",
+          "segundos": 0.0005,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Corredor B"
+          },
+          "resultado": "{\"pasos\": 14, \"camino_resumido\": [\"Médico\", \"puerta\", \"Laboratorio\", \"Corredor B\"]}",
+          "segundos": 0.0006,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 6,
+      "limite_alcanzado": true,
+      "latencia_segundos": 4.707,
+      "valoracion": "Alcanzó el límite de seis llamadas y lo comunicó; las cinco distancias informadas coinciden con la referencia. Indicó que Bodega, Reactor y Hangar quedaron sin calcular, en lugar de inventar resultados.",
+      "correcto": true
+    }
+  ]
+}

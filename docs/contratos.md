@@ -192,13 +192,14 @@ Configuración del LLM (`director/llm.py`):
 
 | Variable | Por defecto | Uso |
 |---|---|---|
-| `NVIDIA_API_KEY` | (ninguno) | Obligatoria para `crear_cliente`; si falta, lanza `ClaveFaltanteError`. Nunca se sube al repositorio. |
-| `XQ_MODELO` | `meta/llama-3.3-70b-instruct` | Nombre del modelo. |
-| `XQ_URL_BASE` | `https://integrate.api.nvidia.com/v1` | Backend compatible con OpenAI. |
+| `XQ_PROVEEDOR` | `nvidia` | Selecciona `nvidia` u `openai`; la plantilla usa `openai`. |
+| `NVIDIA_API_KEY` / `OPENAI_API_KEY` | (ninguna) | Clave del proveedor seleccionado; si falta, `crear_cliente` lanza `ClaveFaltanteError`. Nunca se suben al repositorio. |
+| `XQ_MODELO` | NVIDIA: `meta/llama-3.3-70b-instruct`; OpenAI: `gpt-5.4-nano` | Nombre del modelo. El modelo predeterminado de NVIDIA fue retirado y debe sustituirse. |
+| `XQ_URL_BASE` | NVIDIA: `https://integrate.api.nvidia.com/v1`; OpenAI: `https://api.openai.com/v1` | Backend del proveedor; usar únicamente URLs de confianza. |
 | `XQ_TEMPERATURA` | `0` | Temperatura; 0 para casos repetibles. |
 
 ```python
-config = cargar_config()          # lee el entorno y .env si existe -> ConfigLLM(modelo, url_base, temperatura)
+config = cargar_config()          # lee el entorno y .env si existe -> ConfigLLM(modelo, url_base, temperatura, proveedor)
 cliente = crear_cliente(config)   # openai.OpenAI; no hace llamadas de red al crearse
 ```
 

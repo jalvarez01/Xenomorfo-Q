@@ -32,7 +32,7 @@ class Directora:
     Args:
         semilla: Semilla de la partida.
         cliente: Objeto con chat.completions.create(**kwargs). None crea el cliente real
-            de NVIDIA NIM en la primera pregunta.
+            del proveedor configurado en la primera pregunta.
         config: Configuración del modelo. None la lee del entorno con cargar_config().
         limite: Máximo de herramientas ejecutadas por pregunta.
         max_ticks: Ticks máximos de la partida.
@@ -75,7 +75,7 @@ class Directora:
             límite.
 
         Raises:
-            ClaveFaltanteError: Si no se pasó cliente y falta NVIDIA_API_KEY.
+            ClaveFaltanteError: Si no se pasó cliente y falta la clave del proveedor.
         """
         if self._cliente is None:
             self._cliente = crear_cliente(self.config)

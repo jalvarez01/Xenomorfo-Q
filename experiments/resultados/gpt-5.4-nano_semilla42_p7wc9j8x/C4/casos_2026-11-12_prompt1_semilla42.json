@@ -1,0 +1,74 @@
+{
+  "fecha": "2026-11-12",
+  "prompt_version": "1",
+  "modelo": "gpt-5.4-nano",
+  "temperatura": 0.0,
+  "semilla": 42,
+  "limite": 6,
+  "casos": [
+    {
+      "id": "C4",
+      "categoria": "varias herramientas y acción",
+      "pregunta": "El alienígena lleva rato perdido: dale una pista hacia la sala donde está el tripulante, avanza 10 ticks y dime si se acercó.",
+      "herramientas_esperadas": [
+        "estado_partida",
+        "dar_pista",
+        "avanzar_simulacion",
+        "ruta_mas_corta"
+      ],
+      "resultado_esperado": {
+        "sala_pista": "Bodega",
+        "pistas_restantes": 2,
+        "pasos_antes": 15,
+        "pasos_despues": 6,
+        "se_acerco": true,
+        "capturado": false,
+        "eventos": [
+          "tick 6: el alienígena entró a Corredor A",
+          "tick 9: el alienígena vio al tripulante",
+          "tick 10: el alienígena perdió de vista al tripulante"
+        ]
+      },
+      "respuesta": "Listo: pista dada hacia **Bodega**. Quedan **2** pistas.\n\nAvancé **10 ticks** (hasta el tick **10**). Eventos relevantes:\n- tick 9: el alienígena **vio al tripulante**\n- tick 10: el alienígena **perdió de vista** al tripulante\n\nAhora mismo, **no lo ve** (distancia: **6 casillas**).",
+      "llamadas": [
+        {
+          "herramienta": "estado_partida",
+          "argumentos": {},
+          "resultado": "{\"tick\": 0, \"tripulante\": {\"x\": 2, \"y\": 12, \"sala\": \"Bodega\"}, \"alienigena\": {\"x\": 1, \"y\": 2, \"sala\": \"Médico\", \"direccion\": \"abajo\"}, \"pistas_restantes\": 3, \"capturado\": false}",
+          "segundos": 0.0001,
+          "error": false
+        },
+        {
+          "herramienta": "dar_pista",
+          "argumentos": {
+            "sala": "Bodega"
+          },
+          "resultado": "{\"sala\": \"Bodega\", \"pistas_restantes\": 2}",
+          "segundos": 0.0007,
+          "error": false
+        },
+        {
+          "herramienta": "avanzar_simulacion",
+          "argumentos": {
+            "ticks": 10
+          },
+          "resultado": "{\"tick\": 10, \"ticks_avanzados\": 10, \"eventos\": [\"tick 6: el alienígena entró a Corredor A\", \"tick 9: el alienígena vio al tripulante\", \"tick 10: el alienígena perdió de vista al tripulante\"], \"capturado\": false}",
+          "segundos": 0.0042,
+          "error": false
+        },
+        {
+          "herramienta": "ve_tripulante",
+          "argumentos": {},
+          "resultado": "{\"ve\": false, \"distancia_casillas\": 6}",
+          "segundos": 0.0002,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 4,
+      "limite_alcanzado": false,
+      "latencia_segundos": 4.766,
+      "valoracion": "",
+      "correcto": null
+    }
+  ]
+}

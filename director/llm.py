@@ -1,13 +1,13 @@
 """Configuración del modelo de lenguaje y creación del cliente compatible con OpenAI.
 
-La directora usa un LLM servido por NVIDIA (o cualquier backend compatible con la API de
-OpenAI). Este módulo lee la configuración desde variables de entorno, opcionalmente desde
+La directora usa un LLM servido por NVIDIA u OpenAI. Este módulo lee la configuración desde variables de entorno, opcionalmente desde
 un archivo .env local, y crea el cliente. La clave nunca se guarda en el repositorio.
 
 Variables de entorno:
-    NVIDIA_API_KEY: clave de la API. Obligatoria solo para crear el cliente real.
-    XQ_MODELO: nombre del modelo. Por defecto "meta/llama-3.3-70b-instruct".
-    XQ_URL_BASE: URL base del backend. Por defecto "https://integrate.api.nvidia.com/v1".
+    XQ_PROVEEDOR: "nvidia" por defecto u "openai".
+    NVIDIA_API_KEY / OPENAI_API_KEY: clave del proveedor seleccionado.
+    XQ_MODELO: nombre del modelo. El valor predeterminado depende del proveedor.
+    XQ_URL_BASE: URL base del backend. El valor predeterminado depende del proveedor.
     XQ_TEMPERATURA: temperatura de muestreo. Por defecto 0.
 
 Contenido principal:
@@ -27,6 +27,8 @@ import openai
 
 # Nombres de las variables de entorno que lee este módulo.
 VAR_CLAVE = "NVIDIA_API_KEY"
+VAR_CLAVE_OPENAI = "OPENAI_API_KEY"
+VAR_PROVEEDOR = "XQ_PROVEEDOR"
 VAR_MODELO = "XQ_MODELO"
 VAR_URL_BASE = "XQ_URL_BASE"
 VAR_TEMPERATURA = "XQ_TEMPERATURA"
@@ -35,6 +37,8 @@ VAR_TEMPERATURA = "XQ_TEMPERATURA"
 MODELO_POR_DEFECTO = "meta/llama-3.3-70b-instruct"
 # Endpoint de NVIDIA compatible con la API de OpenAI.
 URL_BASE_POR_DEFECTO = "https://integrate.api.nvidia.com/v1"
+MODELO_OPENAI = "gpt-5.4-nano"
+URL_BASE_OPENAI = "https://api.openai.com/v1"
 # Temperatura de muestreo (adimensional). 0 hace que los casos de prueba sean repetibles.
 TEMPERATURA_POR_DEFECTO = 0.0
 
@@ -65,6 +69,7 @@ class ConfigLLM:
     modelo: str = MODELO_POR_DEFECTO
     url_base: str = URL_BASE_POR_DEFECTO
     temperatura: float = TEMPERATURA_POR_DEFECTO
+    proveedor: str = "nvidia"
 
 
 def _cargar_dotenv() -> None:
@@ -98,8 +103,13 @@ def cargar_config() -> ConfigLLM:
         True
     """
     _cargar_dotenv()
-    modelo = os.environ.get(VAR_MODELO, "").strip() or MODELO_POR_DEFECTO
-    url_base = os.environ.get(VAR_URL_BASE, "").strip() or URL_BASE_POR_DEFECTO
+    proveedor = os.environ.get(VAR_PROVEEDOR, "").strip().lower() or "nvidia"
+    if proveedor not in ("nvidia", "openai"):
+        raise ValueError(f"{VAR_PROVEEDOR} debe ser 'nvidia' u 'openai'; se recibió {proveedor!r}.")
+    modelo_defecto = MODELO_OPENAI if proveedor == "openai" else MODELO_POR_DEFECTO
+    url_defecto = URL_BASE_OPENAI if proveedor == "openai" else URL_BASE_POR_DEFECTO
+    modelo = os.environ.get(VAR_MODELO, "").strip() or modelo_defecto
+    url_base = os.environ.get(VAR_URL_BASE, "").strip() or url_defecto
     texto_temperatura = os.environ.get(VAR_TEMPERATURA, "").strip()
     if texto_temperatura:
         try:
@@ -111,11 +121,11 @@ def cargar_config() -> ConfigLLM:
             ) from None
     else:
         temperatura = TEMPERATURA_POR_DEFECTO
-    return ConfigLLM(modelo=modelo, url_base=url_base, temperatura=temperatura)
+    return ConfigLLM(modelo=modelo, url_base=url_base, temperatura=temperatura, proveedor=proveedor)
 
 
 def crear_cliente(config: ConfigLLM | None = None) -> openai.OpenAI:
-    """Crea el cliente compatible con OpenAI usando la clave de NVIDIA_API_KEY.
+    """Crea el cliente compatible con OpenAI usando la clave del proveedor configurado.
 
     Crear el cliente no hace ninguna llamada de red; la primera llamada ocurre al usar
     cliente.chat.completions.create.
@@ -135,14 +145,17 @@ def crear_cliente(config: ConfigLLM | None = None) -> openai.OpenAI:
     _cargar_dotenv()
     if config is None:
         config = cargar_config()
-    clave = os.environ.get(VAR_CLAVE, "").strip()
+    if config.proveedor not in ("nvidia", "openai"):
+        raise ValueError(f"Proveedor desconocido: {config.proveedor!r}.")
+    variable_clave = VAR_CLAVE_OPENAI if config.proveedor == "openai" else VAR_CLAVE
+    clave = os.environ.get(variable_clave, "").strip()
     if not clave:
         # El mensaje nunca incluye valores: solo el nombre de la variable y cómo definirla.
         raise ClaveFaltanteError(
-            f"Falta la variable de entorno {VAR_CLAVE}. Defínela de una de estas formas:\n"
+            f"Falta la variable de entorno {variable_clave}. Defínela de una de estas formas:\n"
             f"  - Localmente: copia .env.example a .env en la raíz del repositorio y "
-            f"escribe la clave después de {VAR_CLAVE}=.\n"
-            f"  - En Colab: agrégala en Secretos (icono de llave) con el nombre {VAR_CLAVE} "
+            f"escribe la clave después de {variable_clave}=.\n"
+            f"  - En Colab: agrégala en Secretos (icono de llave) con el nombre {variable_clave} "
             f"y cárgala en os.environ antes de crear el cliente.\n"
             f"La clave nunca se sube al repositorio: .env está en .gitignore."
         )

@@ -1,0 +1,39 @@
+{
+  "fecha": "2026-11-12",
+  "prompt_version": "1",
+  "modelo": "gpt-5.4-nano",
+  "temperatura": 0.0,
+  "semilla": 42,
+  "limite": 6,
+  "casos": [
+    {
+      "id": "C5",
+      "categoria": "límite: sala inexistente",
+      "pregunta": "¿Cuántos pasos hay desde la Enfermería hasta el Hangar?",
+      "herramientas_esperadas": [
+        "ruta_mas_corta"
+      ],
+      "resultado_esperado": {
+        "error": "La sala 'Enfermería' no existe. Salas válidas: Médico, Laboratorio, Comunicaciones, Corredor A, Corredor B, Bodega, Reactor, Hangar. También se aceptan 'tripulante' y 'alienigena'."
+      },
+      "respuesta": "“Enfermería” no existe en la estación. Las salas válidas son: Médico, Laboratorio, Comunicaciones, Corredor A, Corredor B, Bodega, Reactor, Hangar.\n\n¿Te referías a **Médico**? Si me confirmas, te calculo los pasos hasta **Hangar**.",
+      "llamadas": [
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "Enfermería",
+            "destino": "Hangar"
+          },
+          "resultado": "{\"error\": \"ValueError: La sala 'Enfermería' no existe. Salas válidas: Médico, Laboratorio, Comunicaciones, Corredor A, Corredor B, Bodega, Reactor, Hangar. También se aceptan 'tripulante' y 'alienigena'.\"}",
+          "segundos": 0.0001,
+          "error": true
+        }
+      ],
+      "numero_llamadas": 1,
+      "limite_alcanzado": false,
+      "latencia_segundos": 2.438,
+      "valoracion": "",
+      "correcto": null
+    }
+  ]
+}
