@@ -10,6 +10,7 @@ repetir parte de la clave): solo el nombre del error.
 
 Contenido principal:
     Sesion: mapa, estado, paso, mover, preguntar y reiniciar.
+    validar_pregunta: limpia una pregunta y rechaza las vacías o demasiado largas.
     rama_alien: rama activa del árbol del alienígena y su casilla objetivo, sin modificarlo.
     objetivo_alien: solo la casilla objetivo (para dibujar la ruta).
     RAMAS: nombre visible de cada rama del árbol.
@@ -81,6 +82,30 @@ def rama_alien(alien: AlienReglas) -> tuple[str, tuple[int, int]]:
 def objetivo_alien(alien: AlienReglas) -> tuple[int, int]:
     """Casilla hacia la que va el alienígena (la de rama_alien)."""
     return rama_alien(alien)[1]
+
+
+def validar_pregunta(pregunta: object) -> str:
+    """Pregunta sin espacios sobrantes en los extremos, lista para la directora.
+
+    Args:
+        pregunta: Texto que mandó el navegador.
+
+    Returns:
+        La pregunta limpia.
+
+    Raises:
+        ValueError: Si la pregunta está vacía o supera LARGO_PREGUNTA caracteres.
+
+    Example:
+        >>> validar_pregunta("  ¿Dónde está?  ")
+        '¿Dónde está?'
+    """
+    pregunta = str(pregunta).strip()
+    if not pregunta:
+        raise ValueError("La pregunta está vacía.")
+    if len(pregunta) > LARGO_PREGUNTA:
+        raise ValueError(f"La pregunta supera los {LARGO_PREGUNTA} caracteres.")
+    return pregunta
 
 
 def _una_linea(texto: str) -> str:
@@ -253,11 +278,7 @@ class Sesion:
         Raises:
             ValueError: Si la pregunta está vacía o es demasiado larga.
         """
-        pregunta = str(pregunta).strip()
-        if not pregunta:
-            raise ValueError("La pregunta está vacía.")
-        if len(pregunta) > LARGO_PREGUNTA:
-            raise ValueError(f"La pregunta supera los {LARGO_PREGUNTA} caracteres.")
+        pregunta = validar_pregunta(pregunta)
         with self._candado:
             try:
                 resultado = self.directora.preguntar(pregunta)
