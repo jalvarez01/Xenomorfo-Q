@@ -18,6 +18,7 @@ from director.prediccion import PredictorDestino
 from sim.avance import Avance
 from sim.env import MAPA_POR_DEFECTO, EstacionEnv
 from sim.mapa import DIRS, SIN_SALA, Mapa
+from sim.percepcion import ALCANCE_VISION
 
 # Semilla por defecto: la misma de los ejemplos de docs/, para que los resultados se
 # puedan comparar con lo documentado.
@@ -33,9 +34,13 @@ class Partida:
         semilla: Semilla de env.reset(); la misma semilla da la misma partida.
         max_ticks: Ticks máximos de la partida.
         mapa: Mapa con salas o ruta a un archivo de mapa. None usa vela9.
+        alcance_vision: Alcance de la visión del alienígena (EstacionEnv). Por defecto el
+            de siempre, 7.5.
+        paso_extra_cada: Paso extra del alienígena al perseguir (AlienReglas). Por
+            defecto None, sin paso extra. Los dos los cambia solo el panel (D19).
 
     Raises:
-        ValueError: Si el mapa no tiene salas.
+        ValueError: Si el mapa no tiene salas o un parámetro opcional no es válido.
 
     Attributes:
         env: Entorno de la partida, ya iniciado.
@@ -53,14 +58,15 @@ class Partida:
     """
 
     def __init__(self, semilla: int = SEMILLA_POR_DEFECTO,
-                 max_ticks: int = MAX_TICKS_POR_DEFECTO, mapa: Mapa | str | None = None):
+                 max_ticks: int = MAX_TICKS_POR_DEFECTO, mapa: Mapa | str | None = None,
+                 alcance_vision: float = ALCANCE_VISION, paso_extra_cada: int | None = None):
         self.semilla = semilla
         self.env = EstacionEnv(mapa if mapa is not None else MAPA_POR_DEFECTO,
-                               max_ticks=max_ticks)
+                               max_ticks=max_ticks, alcance_vision=alcance_vision)
         if self.env.mapa.n_salas == 0:
             raise ValueError("El mapa no tiene salas; las herramientas las necesitan.")
         self.env.reset(semilla)
-        self.alien = AlienReglas(self.env)
+        self.alien = AlienReglas(self.env, paso_extra_cada=paso_extra_cada)
         self.avance = Avance(self.env, self.alien)
         self.predictor = PredictorDestino(self.env.mapa)
         self._sala_alien = SIN_SALA
