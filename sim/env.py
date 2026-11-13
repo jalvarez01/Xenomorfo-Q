@@ -123,11 +123,16 @@ class EstacionEnv:
         self.campo_vision = campo_de_vision(self.mapa, self.alien, self.direccion_alien)
         return self._observacion()
 
-    def step(self, accion: int) -> tuple[np.ndarray, float, bool, dict]:
+    def step(self, accion: int,
+             accion_tripulante: int | None = None) -> tuple[np.ndarray, float, bool, dict]:
         """Avanza un tick: mueve al alienígena, luego al tripulante, y revisa captura.
 
         Args:
             accion: 0 arriba, 1 derecha, 2 abajo, 3 izquierda, 4 revisar casillero.
+            accion_tripulante: Movimiento manual del tripulante (0 arriba, 1 derecha, 2
+                abajo, 3 izquierda, 4 quieto), para el modo de juego del panel. None usa el
+                bot de siempre; así, sin control manual, el generador aleatorio se consume
+                igual que antes y las partidas con semilla no cambian.
 
         Returns:
             Tupla (obs, recompensa, terminado, info):
@@ -140,7 +145,7 @@ class EstacionEnv:
                     del tick).
 
         Raises:
-            ValueError: Si la acción está fuera de 0 a 4.
+            ValueError: Si la acción o la acción del tripulante está fuera de 0 a 4.
 
         Example:
             >>> env = EstacionEnv()
@@ -150,6 +155,8 @@ class EstacionEnv:
         """
         if not 0 <= accion < N_ACCIONES:
             raise ValueError(f"Acción fuera de rango: {accion}")
+        if accion_tripulante is not None and not 0 <= accion_tripulante < N_ACCIONES:
+            raise ValueError(f"Acción del tripulante fuera de rango: {accion_tripulante}")
         self.tick += 1
         recompensa = R_PASO
         # Mira hacia donde intentó moverse, aunque choque: así se gira sin avanzar.
@@ -165,7 +172,10 @@ class EstacionEnv:
         # llega a su lado, el tripulante no alcanza a escapar en ese mismo tick.
         capturado = self._captura()
         if not capturado:
-            self.tripulante = self._paso_tripulante()
+            if accion_tripulante is None:
+                self.tripulante = self._paso_tripulante()
+            else:
+                self.tripulante = self._paso_manual(accion_tripulante)
             self.trayectoria.append(self.tripulante)
             capturado = self._captura()
 
@@ -198,6 +208,14 @@ class EstacionEnv:
             mejor = max(_manhattan(c, self.alien) for c in opciones)
             opciones = [c for c in opciones if _manhattan(c, self.alien) == mejor]
         return opciones[self.rng.integers(len(opciones))]
+
+    def _paso_manual(self, accion: int) -> tuple[int, int]:
+        """Movimiento manual del tripulante: avanza si la casilla es transitable y no es la
+        del alienígena; si no, se queda. No usa el generador aleatorio."""
+        if accion == 4:
+            return self.tripulante
+        nueva = self._mover(self.tripulante, accion)
+        return self.tripulante if nueva == self.alien else nueva
 
     def _captura(self) -> bool:
         """True si el alienígena está en la misma casilla o en una contigua."""

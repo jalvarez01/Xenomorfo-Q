@@ -18,6 +18,7 @@ obs, recompensa, terminado, info = env.step(accion)
 ```
 
 - `mapa`: un `Mapa` o la ruta a un archivo de mapa. Por defecto `data/mapas/vela9.txt`.
+- `env.step(accion, accion_tripulante=None)`: `accion_tripulante` (0 arriba, 1 derecha, 2 abajo, 3 izquierda, 4 quieto) mueve al tripulante a mano, para el modo de juego del panel (D16). Con `None`, que es el valor por defecto, se usa el bot de siempre y el generador aleatorio se consume igual que antes. `Avance.avanzar(ticks, accion_tripulante=None)` y `Partida.avanzar` lo pasan al entorno; las herramientas del agente nunca lo usan.
 - `info` hoy: `{"tick", "capturado", "distancia_real", "ve_tripulante"}`. `ve_tripulante` es `True` si el tripulante está en el campo de visión del alienígena al final del tick.
 - Atributos de visión (T08): `direccion_alien`, la dirección `(dx, dy)` hacia la que mira el alienígena (`(0, 1)` al empezar; cambia con las acciones 0 a 3 aunque choque y no cambia con la 4), y `campo_vision`, matriz booleana `(alto, ancho)` con las casillas que ve, recalculada en `reset()` y en cada tick.
 - Funciones públicas para T11 y T18: en `sim/percepcion.py`, `linea_de_vista(mapa, origen, destino)`, `ve_casilla(mapa, pos, direccion, casilla)` y `campo_de_vision(mapa, pos, direccion)`; en `sim/rutas.py`, `ruta(mapa, origen, destino)` y `ruta_a_sala(mapa, origen, sala)`, que devuelven la lista de casillas (pasos = `len(camino) - 1`) o `None` si no hay camino. Reglas en [entorno.md](entorno.md#visión) y [entorno.md](entorno.md#rutas-con-a).
