@@ -70,11 +70,12 @@ Los ejemplos de los docstrings se pueden verificar con `python -m pytest --docte
 
 ## Claves de API
 
-- El agente lee la clave de NVIDIA NIM de la variable de entorno `NVIDIA_API_KEY`.
-- En local: copiar `.env.example` a `.env` y completar la clave. `.env` está en `.gitignore`.
+- El agente lee la clave del proveedor elegido con `XQ_PROVEEDOR` (D15): `OPENAI_API_KEY` para `openai` (por defecto) o `NVIDIA_API_KEY` para `nvidia`.
+- En local: copiar `.env.example` a `.env` y completar la clave del proveedor. `.env` está en `.gitignore`.
 - En Colab: guardar la clave en los secretos del notebook y no escribirla en ninguna celda.
 - Nunca se sube una clave al repositorio, ni en código, ni en notebooks, ni en commits.
-- Antes de abrir cada PR, correr `git grep -nE "nvapi-[A-Za-z0-9]"` y confirmar que no aparece nada. El patrón busca claves reales (empiezan por `nvapi-`) y no coincide con esta misma línea.
+- Antes de cada commit y de abrir cada PR, correr `git grep -nE "nvapi-[A-Za-z0-9]|sk-[A-Za-z0-9]{20,}"` y confirmar que no aparece nada, también sobre notebooks y archivos de resultados. El patrón busca claves reales de NVIDIA (`nvapi-`) y de OpenAI (`sk-` seguido de al menos 20 caracteres) y no coincide con esta misma línea.
+- Para que esa revisión sea automática, instalar una vez por clon el hook que bloquea el commit si los cambios preparados tienen algo con forma de clave (muestra el archivo, nunca el valor): `cp scripts/revisar_claves.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`.
 - Las pruebas nunca llaman a la API real: usan un cliente falso que simula las respuestas del modelo.
 
 ## Lista de revisión del PR
@@ -82,4 +83,4 @@ Los ejemplos de los docstrings se pueden verificar con `python -m pytest --docte
 - [ ] Las pruebas pasan (`pytest`).
 - [ ] El código nuevo tiene docstrings, anotaciones de tipo y comentarios según el estándar.
 - [ ] `docs/` está actualizado, en especial `contratos.md` si cambió una interfaz.
-- [ ] No hay claves en el repositorio (`git grep -nE "nvapi-[A-Za-z0-9]"` sin resultados) ni archivos `.env`.
+- [ ] No hay claves en el repositorio (`git grep -nE "nvapi-[A-Za-z0-9]|sk-[A-Za-z0-9]{20,}"` sin resultados) ni archivos `.env`.

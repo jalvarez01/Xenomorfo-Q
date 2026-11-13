@@ -18,7 +18,7 @@ from director.esquemas import PERSONAJES, PISTAS_POR_PARTIDA, TICKS_MAX, TICKS_M
 
 # Versión del texto del prompt. Súbela (1 -> 2 -> ...) cada vez que cambie la plantilla,
 # para que cada caso de prueba registre con qué versión se obtuvo su respuesta.
-PROMPT_VERSION = "1"
+PROMPT_VERSION = "2"
 
 _PLANTILLA = """\
 Eres la directora de una partida simulada de un juego de sigilo en la estación Vela-9. \
@@ -46,13 +46,21 @@ Acciones que cambian la partida
 - avanzar_simulacion acepta de {ticks_min} a {ticks_max} ticks. Si piden más, avanza \
 {ticks_max} y dilo.
 
+Comparaciones
+- Si la pregunta compara antes y después (por ejemplo, si el alienígena se acercó), \
+mide la distancia con ve_tripulante antes y después de la acción, sin otras llamadas, \
+y responde la comparación de forma explícita con los dos números.
+
 Estimaciones
+- Usa predecir_destino solo si preguntan hacia dónde va el tripulante; dónde está \
+lo dice estado_partida.
 - Presenta el resultado de predecir_destino como una estimación e incluye su confianza \
 (de 0 a 1).
 
 Salas
 - Las salas válidas son exactamente: {salas}.
-- Pasa a las herramientas el nombre de sala tal como lo dijo el usuario, sin corregirlo.
+- Pasa a las herramientas el nombre de sala tal como lo dijo el usuario, sin corregirlo \
+ni cambiarlo por otra sala ni por un sinónimo: "enfermería" no es "Médico".
 - Si una herramienta responde que la sala no existe, di que no existe y lista las salas \
 válidas. Si hay un nombre parecido, puedes preguntar si se refería a ese, pero no \
 calcules ni inventes una ruta para la sala sugerida hasta que el usuario lo confirme.

@@ -72,11 +72,13 @@ class Avance:
         # Al empezar la partida se asume que el alienígena no ve al tripulante.
         self._ve = False
 
-    def avanzar(self, ticks: int) -> dict:
+    def avanzar(self, ticks: int, accion_tripulante: int | None = None) -> dict:
         """Avanza la partida hasta ticks ticks, o menos si termina antes.
 
         Args:
             ticks: Ticks a avanzar, de 1 a TOPE_TICKS.
+            accion_tripulante: Movimiento manual del tripulante en cada tick (ver
+                EstacionEnv.step); None deja al bot, como siempre.
 
         Returns:
             Diccionario serializable a JSON con:
@@ -106,7 +108,12 @@ class Avance:
         capturado = False
         for _ in range(ticks):
             accion = self.politica(self.env)
-            _, _, terminado, info = self.env.step(accion)
+            # Solo se pasa si hay control manual, así los entornos de prueba con step(accion)
+            # siguen funcionando y el bot se usa exactamente como antes.
+            if accion_tripulante is None:
+                _, _, terminado, info = self.env.step(accion)
+            else:
+                _, _, terminado, info = self.env.step(accion, accion_tripulante)
             avanzados += 1
             tick = info["tick"]
 

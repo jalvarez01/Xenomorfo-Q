@@ -18,6 +18,8 @@ Esta carpeta es la única fuente de documentación técnica de Xenomorfo-Q. Todo
 | [casos.md](casos.md) | Ejecutor de los 6 casos de prueba (apoyo a T21): uso, valores esperados y archivos de evidencia. |
 | [prediccion.md](prediccion.md) | Heurística de `predecir_destino` (T12): cómo decide, resultado y limitaciones. |
 
+El notebook de demostración (T24) está en [../notebooks/demo_directora.ipynb](../notebooks/demo_directora.ipynb). El panel visual local (`python -m panel`, D16) se describe en la sección "Panel visual" del [README](../README.md#panel-visual); sus capturas están en [img/](img/panel.png).
+
 ## Cómo se mantiene
 
 - La documentación se actualiza en el mismo Pull Request que el código que describe. Un PR que cambia una interfaz sin tocar `contratos.md` no se aprueba.

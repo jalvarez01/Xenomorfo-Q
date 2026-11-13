@@ -57,3 +57,25 @@ def test_version_y_salas_vacias():
     assert isinstance(PROMPT_VERSION, str) and PROMPT_VERSION
     with pytest.raises(ValueError):
         construir_prompt_sistema([])
+
+
+def test_no_cambia_salas_por_sinonimos():
+    """El prompt prohíbe cambiar una sala inexistente por un sinónimo (prueba real: 'enfermeria' -> Médico)."""
+    assert "ni por un sinónimo" in PROMPT
+    assert '"enfermería" no es "Médico"' in PROMPT
+
+
+def test_pide_comparar_antes_y_despues():
+    """El prompt pide medir antes y después cuando la pregunta compara (prueba real: C4 no decía si se acercó)."""
+    assert "antes y después" in PROMPT
+    assert "responde la comparación de forma explícita" in PROMPT
+
+
+def test_version_del_prompt_tras_la_prueba_real():
+    """La plantilla cambió tras la prueba real, así que la versión sube a 2."""
+    assert PROMPT_VERSION == "2"
+
+
+def test_predecir_destino_solo_para_el_destino():
+    """El prompt reserva predecir_destino para el destino (prueba real: C4 lo usaba para saber dónde está)."""
+    assert "Usa predecir_destino solo si preguntan hacia dónde va el tripulante" in PROMPT

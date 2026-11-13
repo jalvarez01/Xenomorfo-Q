@@ -66,11 +66,13 @@ class Partida:
         self._sala_alien = SIN_SALA
         self._registrar_sala_alien()
 
-    def avanzar(self, ticks: int) -> dict:
+    def avanzar(self, ticks: int, accion_tripulante: int | None = None) -> dict:
         """Avanza la partida con el alienígena por reglas y actualiza su última sala.
 
         Args:
             ticks: Ticks a avanzar, de 1 a 20.
+            accion_tripulante: Movimiento manual del tripulante (panel, modo de juego);
+                None deja al bot. Las herramientas del agente nunca lo usan.
 
         Returns:
             El resultado de Avance.avanzar: {tick, ticks_avanzados, eventos, capturado}.
@@ -78,7 +80,7 @@ class Partida:
         Raises:
             ValueError: Si ticks no es válido o la partida ya terminó.
         """
-        resultado = self.avance.avanzar(ticks)
+        resultado = self.avance.avanzar(ticks, accion_tripulante)
         self._registrar_sala_alien()
         return resultado
 

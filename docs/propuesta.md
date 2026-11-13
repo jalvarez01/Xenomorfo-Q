@@ -52,6 +52,8 @@ Las respuestas dependen del estado de la partida, que cambia en cada tick, y de 
 
 **Modelo.** Un modelo de lenguaje servido por NVIDIA NIM (`meta/llama-3.3-70b-instruct` por defecto), con cliente compatible con OpenAI y clave privada guardada fuera del repositorio.
 
+> Nota posterior a la entrega del 2026-11-03: ese modelo llegó al fin de su vida en NVIDIA NIM y el proveedor pasó a ser configurable, con OpenAI como principal. Ver la decisión D15 en [decisiones.md](decisiones.md). La propuesta se conserva como se entregó.
+
 **Límite.** El agente hace como máximo 6 llamadas a herramientas por pregunta. Si llega al límite, el modelo responde sin herramientas con lo que ya sabe y dice que alcanzó el límite. Cada llamada queda registrada con la herramienta, los argumentos y el resultado.
 
 ## Fuera del alcance
