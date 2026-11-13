@@ -165,6 +165,7 @@ h1{font-size:clamp(20px,2.4vw,26px);margin:2px 0 0}
         <div class="status">
           <span class="pill" id="livePill"><span class="dot"></span><span id="liveTxt">En pausa</span></span>
           <span class="pill">T+<span id="tick">0000</span></span>
+          <span class="pill" id="nivelPill">Dificultad: Normal</span>
           <span class="pill" id="modelPill">Modelo: --</span>
         </div>
       </header>
@@ -183,6 +184,12 @@ h1{font-size:clamp(20px,2.4vw,26px);margin:2px 0 0}
           <button id="step" class="btn" type="button">Paso</button>
           <button id="reset" class="btn" type="button">Reiniciar</button>
           <label class="seed" for="seed">Semilla <input id="seed" type="number" value="42" step="1"></label>
+          <span class="seed" id="nivelLbl">Dificultad</span>
+          <div class="seg" role="group" aria-labelledby="nivelLbl" id="niveles">
+            <button class="seg-btn" type="button" data-nivel="normal" aria-pressed="true">Normal</button>
+            <button class="seg-btn" type="button" data-nivel="dificil" aria-pressed="false">Difícil</button>
+            <button class="seg-btn" type="button" data-nivel="pesadilla" aria-pressed="false">Pesadilla</button>
+          </div>
         </div>
         <label class="speed" for="speed">Velocidad <input id="speed" type="range" min="1" max="4" step="1" value="2"><output id="speedOut" for="speed">2x</output></label>
       </div>
@@ -429,7 +436,9 @@ h1{font-size:clamp(20px,2.4vw,26px);margin:2px 0 0}
   function actualizarUI() {
     if (!E) return;
     $("tick").textContent = String(E.tick).padStart(4, "0");
-    $("seedTag").textContent = `Vela-9 · semilla ${E.semilla}`;
+    $("seedTag").textContent = `Vela-9 · semilla ${E.semilla} · ${E.nivel_texto}`;
+    $("nivelPill").textContent = `Dificultad: ${E.nivel_texto}`;
+    document.querySelectorAll("[data-nivel]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.nivel === E.nivel));
     $("modelPill").textContent = `Modelo: ${E.modelo}`;
     // Etiqueta y panel de reglas salen del mismo campo (rama), calculado en el servidor.
     $("modeTag").textContent = `Alienígena · ${E.alien.rama_texto}`;
@@ -437,7 +446,9 @@ h1{font-size:clamp(20px,2.4vw,26px);margin:2px 0 0}
     texto("alienRoom", E.alien.sala || "--");
     texto("sees", E.ve ? "Sí" : "No", E.ve ? "hot" : "");
     texto("dist", E.distancia === null ? "--" : `${E.distancia} pasos`);
-    texto("hints", `${E.pistas_restantes} de ${E.pistas_max}`, E.pistas_restantes ? "" : "hot");
+    // En pesadilla se suman las pistas automáticas, que tienen su propio presupuesto.
+    const auto = E.pistas_auto_max ? ` · auto ${E.pistas_auto_restantes} de ${E.pistas_auto_max}` : "";
+    texto("hints", `${E.pistas_restantes} de ${E.pistas_max}${auto}`, E.pistas_restantes ? "" : "hot");
     texto("activeHint", E.pista_activa || "ninguna", E.pista_activa ? "amber" : "");
     const fin = $("endTag");
     fin.textContent = E.capturado ? "captura" : E.terminado ? "fin del tiempo" : "en juego";
@@ -454,6 +465,7 @@ h1{font-size:clamp(20px,2.4vw,26px);margin:2px 0 0}
     $("step").disabled = busy || E.terminado || pilot === "you";
     $("play").disabled = busy || E.terminado || pilot === "you";
     document.querySelectorAll("[data-mv]").forEach((b) => (b.disabled = busy || E.terminado));
+    document.querySelectorAll("[data-nivel]").forEach((b) => (b.disabled = busy));
     pintarChat();
   }
 
@@ -533,6 +545,12 @@ h1{font-size:clamp(20px,2.4vw,26px);margin:2px 0 0}
     // Sin animación desde la partida anterior: la nueva aparece en su lugar.
     accion("/api/reiniciar", { semilla: Number.isFinite(semilla) ? semilla : 42 }).then(() => { prev = null; });
   });
+  // Cambiar la dificultad reinicia la partida con la misma semilla.
+  document.querySelectorAll("[data-nivel]").forEach((b) => b.addEventListener("click", () => {
+    if (!E || busy || b.dataset.nivel === E.nivel) return;
+    setRunning(false); transientError = null; prev = null;
+    accion("/api/reiniciar", { semilla: E.semilla, nivel: b.dataset.nivel }).then(() => { prev = null; });
+  }));
   $("speed").addEventListener("input", (e) => { speed = +e.target.value; $("speedOut").textContent = speed + "x"; });
   document.querySelectorAll("[data-layer]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.layer; layers[k] = !layers[k]; b.setAttribute("aria-pressed", layers[k]);

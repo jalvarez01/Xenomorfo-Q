@@ -17,7 +17,7 @@ Rutas:
     GET  /api/estado    estado actual.
     POST /api/paso      un tick con el bot (modo observar).
     POST /api/mover     {"direccion"}: un tick moviendo al tripulante (modo "Tú").
-    POST /api/reiniciar {"semilla"}: partida nueva.
+    POST /api/reiniciar {"semilla", "nivel"}: partida nueva; sin nivel conserva el actual.
     POST /api/preguntar {"pregunta"}: pregunta a la directora sobre la misma partida.
 
 Contenido principal:
@@ -95,7 +95,9 @@ class _Manejador(BaseHTTPRequestHandler):
             elif ruta == "/api/mover":
                 respuesta = sesion.mover(str(datos.get("direccion", "")))
             elif ruta == "/api/reiniciar":
-                respuesta = sesion.reiniciar(datos.get("semilla", 42))
+                nivel = datos.get("nivel")
+                respuesta = sesion.reiniciar(datos.get("semilla", 42),
+                                             None if nivel is None else str(nivel))
             else:
                 pregunta = validar_pregunta(datos.get("pregunta", ""))
                 aviso = self.limite.reservar(entrada)

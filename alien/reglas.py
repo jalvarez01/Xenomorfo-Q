@@ -9,6 +9,10 @@ En cada tick decide su acción con un árbol simple, en este orden:
 4. Si no, patrulla: recorre los centros de las salas, siempre hacia el más cercano que
    no haya visitado en la vuelta actual.
 
+Opcional (D19, niveles del panel): con paso_extra_cada=N, cada N ticks en los que está
+persiguiendo da un paso más (accion_extra, que Avance aplica con env.paso_extra_alien).
+Por defecto no hay paso extra y el comportamiento es el de siempre.
+
 El alienígena no hace trampa: solo usa la posición del tripulante cuando lo está viendo
 (env.campo_vision). Quien conoce la posición real es la directora, que puede ayudarlo
 con una pista: una sala, nunca una casilla (D2 adaptada en D8). Hay 3 pistas por partida.
@@ -47,9 +51,12 @@ class AlienReglas:
 
     Args:
         env: Entorno ya iniciado con reset(). El mapa debe tener salas.
+        paso_extra_cada: Si es un entero N >= 1, en los ticks múltiplos de N en los que
+            persigue da un paso extra (accion_extra). None, el valor por defecto, no da
+            pasos extra.
 
     Raises:
-        ValueError: Si el mapa no tiene salas.
+        ValueError: Si el mapa no tiene salas o paso_extra_cada no es None ni >= 1.
 
     Attributes:
         env: Entorno de la partida.
@@ -58,6 +65,7 @@ class AlienReglas:
         pista: Índice de la sala de la pista vigente, o None.
         ultima_vista: Última casilla donde vio al tripulante, o None si ya la revisó.
         centros: Centro de cada sala, en orden de índice.
+        paso_extra_cada: Cada cuántos ticks da un paso extra al perseguir, o None.
 
     Example:
         >>> from sim.avance import Avance
@@ -71,10 +79,16 @@ class AlienReglas:
         'persigue'
     """
 
-    def __init__(self, env: EstacionEnv):
+    def __init__(self, env: EstacionEnv, paso_extra_cada: int | None = None):
         if env.mapa.n_salas == 0:
             raise ValueError("El mapa no tiene salas; el alienígena por reglas las necesita.")
+        if paso_extra_cada is not None and (not isinstance(paso_extra_cada, int)
+                                            or isinstance(paso_extra_cada, bool)
+                                            or paso_extra_cada < 1):
+            raise ValueError(f"paso_extra_cada debe ser None o un entero >= 1; "
+                             f"se recibió {paso_extra_cada!r}.")
         self.env = env
+        self.paso_extra_cada = paso_extra_cada
         self.estado = PATRULLA
         self.pistas_restantes = PISTAS_POR_PARTIDA
         self.pista: int | None = None
@@ -150,7 +164,39 @@ class AlienReglas:
             self._objetivo = self._siguiente_patrulla()
         return self._paso_hacia(self.centros[self._objetivo])
 
-    def dar_pista(self, sala: str) -> dict:
+    def accion_extra(self) -> int | None:
+        """Acción del paso extra de este tick, o None si no le toca (D19).
+
+        Le toca solo si paso_extra_cada está definido, el tick es múltiplo de él y en
+        este tick decidió perseguir. El destino es el mismo de la rama de persecución:
+        el tripulante si lo ve ahora, o la última casilla donde lo vio. Avance lo llama
+        después de env.step() y aplica la acción con env.paso_extra_alien(), que usa las
+        mismas reglas de movimiento y de captura. No usa el generador aleatorio.
+
+        Returns:
+            Acción de 0 a 3, o None si no hay paso extra.
+
+        Example:
+            >>> env = EstacionEnv()
+            >>> _ = env.reset(42)
+            >>> AlienReglas(env).accion_extra() is None
+            True
+        """
+        if (self.paso_extra_cada is None or self.estado != PERSIGUE
+                or self.env.tick == 0 or self.env.tick % self.paso_extra_cada):
+            return None
+        tripulante = self.env.tripulante
+        if self.env.campo_vision[tripulante[1], tripulante[0]]:
+            self.ultima_vista = tripulante
+            destino = tripulante
+        elif self.ultima_vista is not None and self.env.alien != self.ultima_vista:
+            destino = self.ultima_vista
+        else:
+            return None
+        accion, _ = self._paso_y_casilla(destino)
+        return None if accion == QUIETO else accion
+
+    def dar_pista(self, sala: str, contar: bool = True) -> dict:
         """Recibe una pista de la directora: la sala donde buscar al tripulante (T19).
 
         La pista no mueve al alienígena: queda vigente y la sigue en los próximos ticks,
@@ -159,6 +205,9 @@ class AlienReglas:
 
         Args:
             sala: Nombre de la sala, sin importar mayúsculas ni espacios al inicio o final.
+            contar: True (por defecto) gasta una de las pistas de la directora. False no
+                la gasta ni la exige: lo usa la pista automática del panel (D19), que
+                lleva su propio presupuesto.
 
         Returns:
             Diccionario serializable a JSON con:
@@ -166,9 +215,14 @@ class AlienReglas:
                 pistas_restantes: Pistas que quedan en la partida.
 
         Raises:
-            ValueError: Si no quedan pistas o la sala no existe (el mensaje lista las
-                salas válidas). En ninguno de los dos casos se gasta una pista.
+            ValueError: Si no quedan pistas (solo con contar=True) o la sala no existe
+                (el mensaje lista las salas válidas). En ninguno de los dos casos se gasta
+                una pista.
         """
+        if not contar:
+            self.pista = self._indice_sala(sala)
+            return {"sala": self.env.mapa.nombres_salas[self.pista],
+                    "pistas_restantes": self.pistas_restantes}
         if self.pistas_restantes == 0:
             raise ValueError(
                 f"No quedan pistas: ya se usaron las {PISTAS_POR_PARTIDA} de la partida.")

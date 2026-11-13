@@ -14,8 +14,14 @@ Eventos que se registran:
       no lo informa, no se registran.
     - Eventos propios de la política, si tiene un método tomar_eventos(). El alienígena
       por reglas (alien/reglas.py) informa así cuándo llega a la sala de una pista.
+    - Eventos de la función tras_tick, si se pasa una (el panel la usa para su pista
+      automática, D19).
     - Captura del tripulante.
     - Fin de la partida por tiempo (max_ticks).
+
+Si la política tiene un método accion_extra() que devuelve una acción, Avance la aplica
+en el mismo tick con env.paso_extra_alien() (persecución rápida de los niveles del
+panel, D19). Por defecto ninguna de las dos cosas está activa.
 
 Contenido principal:
     Avance: avanza un EstacionEnv y guarda el historial de eventos de la partida.
@@ -36,6 +42,9 @@ TOPE_TICKS = 20
 
 # Función que recibe el entorno y devuelve la acción del alienígena (0 a 4).
 PoliticaAlien = Callable[[EstacionEnv], int]
+# Función opcional que se llama al final de cada tick sin captura, con el entorno y el
+# info del tick; devuelve eventos en texto (sin el prefijo del tick).
+TrasTick = Callable[[EstacionEnv, dict], list[str]]
 
 
 class Avance:
@@ -47,10 +56,14 @@ class Avance:
     Args:
         env: Entorno ya iniciado con reset().
         politica: Función que recibe el entorno y devuelve la acción del alienígena.
+        tras_tick: Función opcional que se llama al final de cada tick sin captura y
+            devuelve eventos propios. None, el valor por defecto, no hace nada.
 
     Attributes:
         env: Entorno que se avanza.
         politica: Política del alienígena.
+        tras_tick: La función de fin de tick, o None. Se puede asignar después de crear
+            el Avance.
         historial: Todos los eventos de la partida, en orden, de todas las llamadas.
 
     Example:
@@ -63,9 +76,11 @@ class Avance:
         {'tick': 3, 'ticks_avanzados': 3, 'eventos': [], 'capturado': False}
     """
 
-    def __init__(self, env: EstacionEnv, politica: PoliticaAlien):
+    def __init__(self, env: EstacionEnv, politica: PoliticaAlien,
+                 tras_tick: TrasTick | None = None):
         self.env = env
         self.politica = politica
+        self.tras_tick = tras_tick
         self.historial: list[str] = []
         self._sala_tripulante = env.mapa.sala(env.tripulante[0], env.tripulante[1])
         self._sala_alien = env.mapa.sala(env.alien[0], env.alien[1])
@@ -117,6 +132,14 @@ class Avance:
             avanzados += 1
             tick = info["tick"]
 
+            # Paso extra de persecución (D19): solo si la política lo ofrece y le toca. Una
+            # función simple o AlienReglas sin paso_extra_cada nunca lo da.
+            accion_extra = getattr(self.politica, "accion_extra", None)
+            if accion_extra is not None and not info["capturado"]:
+                extra = accion_extra()
+                if extra is not None:
+                    info = {**info, **self.env.paso_extra_alien(extra)}
+
             sala = self.env.mapa.sala(self.env.tripulante[0], self.env.tripulante[1])
             # En una puerta la sala es SIN_SALA: se ignora y se recuerda la anterior.
             if sala != SIN_SALA and sala != self._sala_tripulante:
@@ -142,6 +165,10 @@ class Avance:
             tomar_eventos = getattr(self.politica, "tomar_eventos", None)
             if tomar_eventos is not None:
                 for texto in tomar_eventos():
+                    eventos.append(f"tick {tick}: {texto}")
+
+            if self.tras_tick is not None and not info["capturado"]:
+                for texto in self.tras_tick(self.env, info):
                     eventos.append(f"tick {tick}: {texto}")
 
             if info["capturado"]:

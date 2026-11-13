@@ -36,6 +36,9 @@ class Directora:
         config: Configuración del modelo. None la lee del entorno con cargar_config().
         limite: Máximo de herramientas ejecutadas por pregunta.
         max_ticks: Ticks máximos de la partida.
+        opciones_partida: Parámetros opcionales de Partida (alcance_vision,
+            paso_extra_cada) para todas las partidas de esta directora. None, el valor por
+            defecto, usa los de siempre; solo el panel los cambia (D19).
 
     Raises:
         ValueError: Si las herramientas no coinciden con sus esquemas.
@@ -57,9 +60,10 @@ class Directora:
 
     def __init__(self, semilla: int = SEMILLA_POR_DEFECTO, cliente: Any = None,
                  config: ConfigLLM | None = None, limite: int = LIMITE_POR_DEFECTO,
-                 max_ticks: int = MAX_TICKS_POR_DEFECTO):
+                 max_ticks: int = MAX_TICKS_POR_DEFECTO, opciones_partida: dict | None = None):
         self.limite = limite
         self.max_ticks = max_ticks
+        self.opciones_partida = dict(opciones_partida or {})
         self.config = config if config is not None else cargar_config()
         self._cliente = cliente
         self.reiniciar(semilla)
@@ -94,7 +98,7 @@ class Directora:
         """
         if semilla is None:
             semilla = self.partida.semilla
-        self.partida = Partida(semilla=semilla, max_ticks=self.max_ticks)
+        self.partida = Partida(semilla=semilla, max_ticks=self.max_ticks, **self.opciones_partida)
         self.herramientas = crear_herramientas(self.partida)
         nombres = self.partida.env.mapa.nombres_salas
         self.esquemas = construir_esquemas(nombres)

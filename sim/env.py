@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 
 from .mapa import DIRS, Mapa
-from .percepcion import campo_de_vision
+from .percepcion import ALCANCE_VISION, campo_de_vision
 
 # Mapa que se usa cuando no se pasa ninguno. Se resuelve desde la ubicación del paquete
 # para que funcione sin importar el directorio de trabajo.
@@ -58,9 +58,12 @@ class EstacionEnv:
         distancia_inicial: Distancia Manhattan mínima entre alienígena y tripulante al
             iniciar, en casillas.
         semilla: Semilla del generador aleatorio. None usa una semilla del sistema.
+        alcance_vision: Alcance de la visión del alienígena, en casillas. Por defecto
+            ALCANCE_VISION (7.5), el de siempre; el panel lo sube en los niveles difíciles
+            (D19).
 
     Raises:
-        ValueError: Si el mapa no es válido.
+        ValueError: Si el mapa no es válido o alcance_vision no es mayor que 0.
         FileNotFoundError: Si se pasa una ruta que no existe.
 
     Attributes:
@@ -75,6 +78,7 @@ class EstacionEnv:
             con la acción 4.
         campo_vision: Matriz booleana (alto, ancho) con las casillas que ve el
             alienígena (sim/percepcion.py, T08). Se recalcula en reset() y en cada tick.
+        alcance_vision: Alcance de la visión con el que se calcula campo_vision.
 
     Example:
         >>> env = EstacionEnv()
@@ -84,7 +88,11 @@ class EstacionEnv:
     """
 
     def __init__(self, mapa: Mapa | str | Path = MAPA_POR_DEFECTO, max_ticks: int = 300,
-                 distancia_inicial: int = 10, semilla: int | None = None):
+                 distancia_inicial: int = 10, semilla: int | None = None,
+                 alcance_vision: float = ALCANCE_VISION):
+        if alcance_vision <= 0:
+            raise ValueError(f"alcance_vision debe ser mayor que 0; se recibió {alcance_vision}.")
+        self.alcance_vision = alcance_vision
         self.mapa = mapa if isinstance(mapa, Mapa) else Mapa.desde_archivo(mapa)
         self.max_ticks = max_ticks
         self.distancia_inicial = distancia_inicial
@@ -120,7 +128,7 @@ class EstacionEnv:
         self.tick = 0
         self.trayectoria = [self.tripulante]
         self.direccion_alien = DIRECCION_INICIAL
-        self.campo_vision = campo_de_vision(self.mapa, self.alien, self.direccion_alien)
+        self.campo_vision = self._calcular_vision()
         return self._observacion()
 
     def step(self, accion: int,
@@ -180,7 +188,7 @@ class EstacionEnv:
             capturado = self._captura()
 
         # El alienígena ya no se mueve en este tick, así que su campo de visión es final.
-        self.campo_vision = campo_de_vision(self.mapa, self.alien, self.direccion_alien)
+        self.campo_vision = self._calcular_vision()
         ve = bool(self.campo_vision[self.tripulante[1], self.tripulante[0]])
 
         if capturado:
@@ -191,7 +199,48 @@ class EstacionEnv:
                 "ve_tripulante": ve}
         return self._observacion(), recompensa, terminado, info
 
+    def paso_extra_alien(self, accion: int) -> dict:
+        """Un paso más del alienígena dentro del tick actual (persecución rápida, D19).
+
+        Usa las mismas reglas de movimiento que step(): gira hacia donde intenta ir, no
+        atraviesa paredes y revisa la captura antes y después de moverse. No avanza el
+        tick, no mueve al tripulante y no usa el generador aleatorio.
+
+        Args:
+            accion: 0 arriba, 1 derecha, 2 abajo, 3 izquierda o 4 quieto.
+
+        Returns:
+            {'tick', 'capturado', 'distancia_real', 've_tripulante'}, como el info de step().
+
+        Raises:
+            ValueError: Si la acción está fuera de 0 a 4.
+
+        Example:
+            >>> env = EstacionEnv()
+            >>> _ = env.reset(42)
+            >>> env.alien
+            (1, 2)
+            >>> env.paso_extra_alien(1)  # a la derecha hay pared: solo gira
+            {'tick': 0, 'capturado': False, 'distancia_real': 11, 've_tripulante': False}
+            >>> env.alien, env.direccion_alien
+            ((1, 2), (1, 0))
+        """
+        if not 0 <= accion < N_ACCIONES:
+            raise ValueError(f"Acción fuera de rango: {accion}")
+        # Si ya lo alcanzó, no hace falta moverse: la captura queda como está.
+        if not self._captura() and accion < 4:
+            self.direccion_alien = DIRS[accion]
+            self.alien = self._mover(self.alien, accion)
+            self.campo_vision = self._calcular_vision()
+        return {"tick": self.tick, "capturado": self._captura(),
+                "distancia_real": _manhattan(self.alien, self.tripulante),
+                "ve_tripulante": bool(self.campo_vision[self.tripulante[1], self.tripulante[0]])}
+
     # ------------------------------------------------------------- internos
+    def _calcular_vision(self) -> np.ndarray:
+        """Campo de visión del alienígena con el alcance de este entorno."""
+        return campo_de_vision(self.mapa, self.alien, self.direccion_alien, self.alcance_vision)
+
     def _mover(self, pos: tuple[int, int], accion: int) -> tuple[int, int]:
         """Aplica una acción de movimiento; si choca, se queda en el sitio."""
         dx, dy = DIRS[accion]
