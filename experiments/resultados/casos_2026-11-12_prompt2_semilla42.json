@@ -1,0 +1,440 @@
+{
+  "fecha": "2026-11-12",
+  "prompt_version": "2",
+  "modelo": "gpt-5.4-nano",
+  "temperatura": 0.0,
+  "semilla": 42,
+  "limite": 6,
+  "casos": [
+    {
+      "id": "C1",
+      "categoria": "habitual",
+      "pregunta": "¿En qué sala está el tripulante y a cuántos pasos está el alienígena?",
+      "herramientas_esperadas": [
+        "estado_partida",
+        "ruta_mas_corta"
+      ],
+      "semilla_caso": 42,
+      "resultado_esperado": {
+        "sala_tripulante": "Bodega",
+        "pasos_alienigena_tripulante": 15
+      },
+      "respuesta": "- El tripulante está en **Bodega**.\n- El alienígena está a **15 pasos** del tripulante (ruta más corta: **Médico → Corredor A → Bodega**).",
+      "llamadas": [
+        {
+          "herramienta": "estado_partida",
+          "argumentos": {},
+          "resultado": "{\"tick\": 0, \"tripulante\": {\"x\": 2, \"y\": 12, \"sala\": \"Bodega\"}, \"alienigena\": {\"x\": 1, \"y\": 2, \"sala\": \"Médico\", \"direccion\": \"abajo\"}, \"pistas_restantes\": 3, \"capturado\": false}",
+          "segundos": 0.0002,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "tripulante"
+          },
+          "resultado": "{\"pasos\": 15, \"camino_resumido\": [\"Médico\", \"puerta\", \"Corredor A\", \"puerta\", \"Bodega\"]}",
+          "segundos": 0.0003,
+          "error": false
+        },
+        {
+          "herramienta": "ve_tripulante",
+          "argumentos": {},
+          "resultado": "{\"ve\": false, \"distancia_casillas\": 15}",
+          "segundos": 0.0001,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 3,
+      "limite_alcanzado": false,
+      "latencia_segundos": 2.888,
+      "comparacion": [
+        {
+          "dato": "sala del tripulante",
+          "esperado": "Bodega",
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "pasos del alienígena al tripulante",
+          "esperado": 15,
+          "obtenido": "mencionado",
+          "coincide": true
+        }
+      ],
+      "valoracion_sugerida": "correcto: coinciden los 2 datos esperados; usó estado_partida, ruta_mas_corta, ve_tripulante.",
+      "valoracion": "",
+      "correcto": null
+    },
+    {
+      "id": "C2",
+      "categoria": "habitual",
+      "pregunta": "¿El alienígena está viendo al tripulante en este momento?",
+      "herramientas_esperadas": [
+        "ve_tripulante"
+      ],
+      "semilla_caso": 42,
+      "resultado_esperado": {
+        "ve": false,
+        "distancia_casillas": 15
+      },
+      "respuesta": "No. En este momento el alienígena **no** está viendo al tripulante.  \nDistancia actual: **15 casillas**.",
+      "llamadas": [
+        {
+          "herramienta": "ve_tripulante",
+          "argumentos": {},
+          "resultado": "{\"ve\": false, \"distancia_casillas\": 15}",
+          "segundos": 0.0003,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 1,
+      "limite_alcanzado": false,
+      "latencia_segundos": 1.518,
+      "comparacion": [
+        {
+          "dato": "lo ve",
+          "esperado": "no",
+          "obtenido": "mencionado",
+          "coincide": true
+        }
+      ],
+      "valoracion_sugerida": "correcto: coinciden los 1 datos esperados; usó ve_tripulante.",
+      "valoracion": "",
+      "correcto": null
+    },
+    {
+      "id": "C3",
+      "categoria": "habitual",
+      "pregunta": "¿Hacia qué sala se dirige el tripulante?",
+      "herramientas_esperadas": [
+        "predecir_destino"
+      ],
+      "preparacion": {
+        "semilla": 0,
+        "ticks": 11
+      },
+      "semilla_caso": 0,
+      "resultado_esperado": {
+        "sala": "Hangar",
+        "confianza": 0.5,
+        "acercamiento_casillas": 5,
+        "ticks_analizados": 10,
+        "sala_actual_tripulante": "Corredor B"
+      },
+      "respuesta": "El tripulante parece dirigirse a **Hangar**.\n\n- **Confianza:** 0.5  \n- **Acercamiento (casillas) en la ventana:** 5  \n- **Ticks analizados:** 10",
+      "llamadas": [
+        {
+          "herramienta": "predecir_destino",
+          "argumentos": {},
+          "resultado": "{\"sala\": \"Hangar\", \"confianza\": 0.5, \"acercamiento_casillas\": 5, \"ticks_analizados\": 10}",
+          "segundos": 0.0003,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 1,
+      "limite_alcanzado": false,
+      "latencia_segundos": 2.102,
+      "comparacion": [
+        {
+          "dato": "sala destino",
+          "esperado": "Hangar",
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "confianza",
+          "esperado": 0.5,
+          "obtenido": "mencionado",
+          "coincide": true
+        }
+      ],
+      "valoracion_sugerida": "correcto: coinciden los 2 datos esperados; usó predecir_destino.",
+      "valoracion": "",
+      "correcto": null
+    },
+    {
+      "id": "C4",
+      "categoria": "varias herramientas y acción",
+      "pregunta": "El alienígena lleva rato perdido: dale una pista hacia la sala donde está el tripulante, avanza 10 ticks y dime si se acercó.",
+      "herramientas_esperadas": [
+        "estado_partida",
+        "dar_pista",
+        "avanzar_simulacion",
+        "ruta_mas_corta"
+      ],
+      "semilla_caso": 42,
+      "resultado_esperado": {
+        "sala_pista": "Bodega",
+        "pistas_restantes": 2,
+        "pasos_antes": 15,
+        "pasos_despues": 6,
+        "se_acerco": true,
+        "capturado": false,
+        "eventos": [
+          "tick 6: el alienígena entró a Corredor A",
+          "tick 9: el alienígena vio al tripulante",
+          "tick 10: el alienígena perdió de vista al tripulante"
+        ]
+      },
+      "respuesta": "- Pista dada: **Bodega**. Pistas restantes: **2**.\n- Avancé **10 ticks** (hasta tick **10**). Eventos:  \n  - tick 6: el alienígena entró a **Corredor A**  \n  - tick 9: el alienígena **vio al tripulante**  \n  - tick 10: el alienígena **perdió de vista** al tripulante\n- ¿Se acercó? **No puedo confirmarlo** con números: ahora mismo **no lo ve** (ve=false) y la herramienta solo me da distancia cuando lo ve.",
+      "llamadas": [
+        {
+          "herramienta": "estado_partida",
+          "argumentos": {},
+          "resultado": "{\"tick\": 0, \"tripulante\": {\"x\": 2, \"y\": 12, \"sala\": \"Bodega\"}, \"alienigena\": {\"x\": 1, \"y\": 2, \"sala\": \"Médico\", \"direccion\": \"abajo\"}, \"pistas_restantes\": 3, \"capturado\": false}",
+          "segundos": 0.0001,
+          "error": false
+        },
+        {
+          "herramienta": "dar_pista",
+          "argumentos": {
+            "sala": "Bodega"
+          },
+          "resultado": "{\"sala\": \"Bodega\", \"pistas_restantes\": 2}",
+          "segundos": 0.0001,
+          "error": false
+        },
+        {
+          "herramienta": "avanzar_simulacion",
+          "argumentos": {
+            "ticks": 10
+          },
+          "resultado": "{\"tick\": 10, \"ticks_avanzados\": 10, \"eventos\": [\"tick 6: el alienígena entró a Corredor A\", \"tick 9: el alienígena vio al tripulante\", \"tick 10: el alienígena perdió de vista al tripulante\"], \"capturado\": false}",
+          "segundos": 0.0028,
+          "error": false
+        },
+        {
+          "herramienta": "ve_tripulante",
+          "argumentos": {},
+          "resultado": "{\"ve\": false, \"distancia_casillas\": 6}",
+          "segundos": 0.0003,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 4,
+      "limite_alcanzado": false,
+      "latencia_segundos": 4.895,
+      "comparacion": [
+        {
+          "dato": "sala de la pista",
+          "esperado": "Bodega",
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "pistas restantes",
+          "esperado": 2,
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "pasos antes",
+          "esperado": 15,
+          "obtenido": "no mencionado",
+          "coincide": false
+        },
+        {
+          "dato": "pasos después",
+          "esperado": 6,
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "se acercó",
+          "esperado": "sí",
+          "obtenido": "no mencionado",
+          "coincide": false
+        }
+      ],
+      "valoracion_sugerida": "parcial: no coincide pasos antes, se acercó; usó estado_partida, dar_pista, avanzar_simulacion, ve_tripulante.",
+      "valoracion": "",
+      "correcto": null
+    },
+    {
+      "id": "C5",
+      "categoria": "límite: sala inexistente",
+      "pregunta": "¿Cuántos pasos hay desde la Enfermería hasta el Hangar?",
+      "herramientas_esperadas": [
+        "ruta_mas_corta"
+      ],
+      "semilla_caso": 42,
+      "resultado_esperado": {
+        "error": "La sala 'Enfermería' no existe. Salas válidas: Médico, Laboratorio, Comunicaciones, Corredor A, Corredor B, Bodega, Reactor, Hangar. También se aceptan 'tripulante' y 'alienigena'."
+      },
+      "respuesta": "La sala **“Enfermería”** no existe en esta estación. Las salas válidas son: **Médico, Laboratorio, Comunicaciones, Corredor A, Corredor B, Bodega, Reactor, Hangar**.\n\n¿Te refieres a **“Médico”**? Si confirmas, te digo los pasos exactos hasta **Hangar**.",
+      "llamadas": [
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "Enfermería",
+            "destino": "Hangar"
+          },
+          "resultado": "{\"error\": \"ValueError: La sala 'Enfermería' no existe. Salas válidas: Médico, Laboratorio, Comunicaciones, Corredor A, Corredor B, Bodega, Reactor, Hangar. También se aceptan 'tripulante' y 'alienigena'.\"}",
+          "segundos": 0.0001,
+          "error": true
+        }
+      ],
+      "numero_llamadas": 1,
+      "limite_alcanzado": false,
+      "latencia_segundos": 1.929,
+      "comparacion": [
+        {
+          "dato": "dice que la sala no existe",
+          "esperado": "no existe",
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "lista las 8 salas válidas",
+          "esperado": "8 salas",
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "no calcula una ruta",
+          "esperado": "ninguna ruta calculada",
+          "obtenido": "mencionado",
+          "coincide": true
+        }
+      ],
+      "valoracion_sugerida": "correcto: coinciden los 3 datos esperados; usó ruta_mas_corta.",
+      "valoracion": "",
+      "correcto": null
+    },
+    {
+      "id": "C6",
+      "categoria": "extra: límite de llamadas",
+      "pregunta": "Calcula la distancia del alienígena a cada una de las 8 salas.",
+      "herramientas_esperadas": [
+        "ruta_mas_corta"
+      ],
+      "semilla_caso": 42,
+      "resultado_esperado": {
+        "pasos_por_sala": {
+          "Médico": 0,
+          "Laboratorio": 8,
+          "Comunicaciones": 16,
+          "Corredor A": 6,
+          "Corredor B": 14,
+          "Bodega": 12,
+          "Reactor": 16,
+          "Hangar": 26
+        },
+        "llamadas_necesarias": 8,
+        "limite_alcanzado": true
+      },
+      "respuesta": "Con la información ya obtenida (y **alcanzando el límite de llamadas a herramientas**), solo tengo distancias/rutas calculadas para estas salas:\n\n- **Médico**: 0 pasos (camino: Médico)\n- **Laboratorio**: 8 pasos (camino: Médico → puerta → Laboratorio)\n- **Comunicaciones**: 16 pasos (camino: Médico → puerta → Laboratorio → puerta → Comunicaciones)\n- **Corredor A**: 6 pasos (camino: Médico → puerta → Corredor A)\n- **Corredor B**: 14 pasos (camino: Médico → puerta → Laboratorio → Corredor B)\n\nPara las otras 3 salas (**Bodega**, **Reactor**, **Hangar**) **no se pudo calcular** porque se alcanzó el límite de llamadas a herramientas antes de obtener sus resultados.",
+      "llamadas": [
+        {
+          "herramienta": "estado_partida",
+          "argumentos": {},
+          "resultado": "{\"tick\": 0, \"tripulante\": {\"x\": 2, \"y\": 12, \"sala\": \"Bodega\"}, \"alienigena\": {\"x\": 1, \"y\": 2, \"sala\": \"Médico\", \"direccion\": \"abajo\"}, \"pistas_restantes\": 3, \"capturado\": false}",
+          "segundos": 0.0001,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Médico"
+          },
+          "resultado": "{\"pasos\": 0, \"camino_resumido\": [\"Médico\"]}",
+          "segundos": 0.0005,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Laboratorio"
+          },
+          "resultado": "{\"pasos\": 8, \"camino_resumido\": [\"Médico\", \"puerta\", \"Laboratorio\"]}",
+          "segundos": 0.0007,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Comunicaciones"
+          },
+          "resultado": "{\"pasos\": 16, \"camino_resumido\": [\"Médico\", \"puerta\", \"Laboratorio\", \"puerta\", \"Comunicaciones\"]}",
+          "segundos": 0.0009,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Corredor A"
+          },
+          "resultado": "{\"pasos\": 6, \"camino_resumido\": [\"Médico\", \"puerta\", \"Corredor A\"]}",
+          "segundos": 0.0003,
+          "error": false
+        },
+        {
+          "herramienta": "ruta_mas_corta",
+          "argumentos": {
+            "origen": "alienigena",
+            "destino": "Corredor B"
+          },
+          "resultado": "{\"pasos\": 14, \"camino_resumido\": [\"Médico\", \"puerta\", \"Laboratorio\", \"Corredor B\"]}",
+          "segundos": 0.0005,
+          "error": false
+        }
+      ],
+      "numero_llamadas": 6,
+      "limite_alcanzado": true,
+      "latencia_segundos": 4.417,
+      "comparacion": [
+        {
+          "dato": "alcanza el límite",
+          "esperado": true,
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "dice que alcanzó el límite",
+          "esperado": "límite",
+          "obtenido": "mencionado",
+          "coincide": true
+        },
+        {
+          "dato": "pasos a Médico",
+          "esperado": 0,
+          "obtenido": 0,
+          "coincide": true
+        },
+        {
+          "dato": "pasos a Laboratorio",
+          "esperado": 8,
+          "obtenido": 8,
+          "coincide": true
+        },
+        {
+          "dato": "pasos a Comunicaciones",
+          "esperado": 16,
+          "obtenido": 16,
+          "coincide": true
+        },
+        {
+          "dato": "pasos a Corredor A",
+          "esperado": 6,
+          "obtenido": 6,
+          "coincide": true
+        },
+        {
+          "dato": "pasos a Corredor B",
+          "esperado": 14,
+          "obtenido": 14,
+          "coincide": true
+        }
+      ],
+      "valoracion_sugerida": "correcto: coinciden los 7 datos esperados; usó estado_partida, ruta_mas_corta.",
+      "valoracion": "",
+      "correcto": null
+    }
+  ]
+}
