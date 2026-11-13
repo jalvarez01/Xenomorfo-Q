@@ -9,7 +9,7 @@ python -m experiments.casos                 # semilla 42, resultados en experime
 python -m experiments.casos --semilla 7 --salida otra/carpeta
 ```
 
-Necesita `NVIDIA_API_KEY` (ver `.env.example`). Sin la clave termina con código 2 y no escribe archivos.
+Necesita la clave del proveedor elegido con `XQ_PROVEEDOR` (ver `.env.example`). Sin la clave termina con código 2 y no escribe archivos.
 
 Cada caso corre con una `Directora` nueva, en su propia partida con la misma semilla, así C4 (que da una pista y avanza) no cambia los demás.
 

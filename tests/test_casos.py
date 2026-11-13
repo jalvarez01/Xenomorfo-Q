@@ -23,6 +23,8 @@ CLAVE_FALSA = "clave-secreta-de-prueba-0123456789"
 def entorno(monkeypatch):
     """Define una clave falsa en el entorno y desactiva la carga de .env."""
     monkeypatch.setattr(llm, "_cargar_dotenv", lambda: None)
+    for nombre in (llm.VAR_PROVEEDOR, *llm.VARIABLES_CLAVE, llm.VAR_MODELO, llm.VAR_URL_BASE):
+        monkeypatch.delenv(nombre, raising=False)
     monkeypatch.setenv(llm.VAR_CLAVE, CLAVE_FALSA)
 
 
@@ -91,14 +93,15 @@ def test_la_clave_nunca_aparece(tmp_path):
     for ruta in ejecutar_casos(salida=tmp_path, cliente=ClienteFalso(guion()), config=ConfigLLM()):
         contenido = ruta.read_text(encoding="utf-8")
         assert CLAVE_FALSA not in contenido
-        assert llm.VAR_CLAVE not in contenido
+        for variable in llm.VARIABLES_CLAVE:
+            assert variable not in contenido
 
 
 def test_comando_sin_clave(monkeypatch, tmp_path, capsys):
-    """Sin NVIDIA_API_KEY el comando sale con código 2, sin escribir archivos."""
+    """Sin la clave del proveedor el comando sale con código 2, sin escribir archivos."""
     monkeypatch.delenv(llm.VAR_CLAVE)
     assert casos.main(["--salida", str(tmp_path)]) == casos.CODIGO_SIN_CLAVE
-    assert "NVIDIA_API_KEY" in capsys.readouterr().err
+    assert llm.VAR_CLAVE in capsys.readouterr().err
     assert list(tmp_path.iterdir()) == []
 
 

@@ -43,14 +43,22 @@ La primera forma responde una pregunta; con `--registro` muestra también cada l
 
 ## Configuración de la clave
 
-- En local: copiar `.env.example` a `.env` y completar `NVIDIA_API_KEY`.
-- En Colab: guardar `NVIDIA_API_KEY` en los secretos del notebook.
-- Nunca subir `.env` ni la clave al repositorio.
+El proveedor del modelo se elige con `XQ_PROVEEDOR` (decisión D15 en [docs/decisiones.md](docs/decisiones.md)):
+
+| Proveedor | `XQ_PROVEEDOR` | Clave | Modelo por defecto | Nota |
+|---|---|---|---|---|
+| OpenAI (principal) | `openai` | `OPENAI_API_KEY` | `gpt-5.4-nano` | De pago por uso; respuestas en unos 2 a 3 s. |
+| NVIDIA NIM (alternativa) | `nvidia` | `NVIDIA_API_KEY` | `openai/gpt-oss-20b` | Gratuita con cuenta en build.nvidia.com; en nuestras pruebas tardó unos 4 minutos por pregunta. |
+
+- En local: copiar `.env.example` a `.env`, poner `XQ_PROVEEDOR` y completar la clave de ese proveedor. Para cambiar de proveedor basta con cambiar `XQ_PROVEEDOR`; `XQ_MODELO` cambia el modelo.
+- En Colab: guardar la clave en los secretos del notebook con el nombre de su variable (`OPENAI_API_KEY` o `NVIDIA_API_KEY`).
+- Con OpenAI, conviene fijar un límite de gasto mensual bajo en la configuración de la cuenta: los casos y la demostración hacen pocas llamadas, y el límite evita sorpresas si la clave se filtra.
+- Nunca subir `.env` ni una clave al repositorio.
 
 ## Fuentes y herramientas
 
 - Simulación propia en Python y mapa ficticio Vela-9 en [data/mapas/](data/mapas/).
-- Modelo de lenguaje servido por NVIDIA NIM: `meta/llama-3.3-70b-instruct`.
+- Modelo de lenguaje: `gpt-5.4-nano` de OpenAI por defecto, o un modelo de NVIDIA NIM como alternativa (D15).
 - El ciclo del agente parte de los notebooks del curso de [Lecture11](https://github.com/EAFIT-IA/si3003-artificial-intelligence/tree/main/notebooks/Lecture11).
 
 ## Casos de prueba

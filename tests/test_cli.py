@@ -17,7 +17,8 @@ from tests.test_directora import ClienteFalso, pide, texto
 def sin_clave(monkeypatch):
     """Aísla las pruebas de la clave real y de cualquier .env local."""
     monkeypatch.setattr(llm, "_cargar_dotenv", lambda: None)
-    monkeypatch.delenv(llm.VAR_CLAVE, raising=False)
+    for nombre in (llm.VAR_PROVEEDOR, *llm.VARIABLES_CLAVE, llm.VAR_MODELO, llm.VAR_URL_BASE):
+        monkeypatch.delenv(nombre, raising=False)
 
 
 def usar_cliente(monkeypatch, guion: list) -> ClienteFalso:
@@ -46,10 +47,10 @@ def test_pregunta_sin_registro(monkeypatch, capsys):
 
 
 def test_sin_clave_codigo_2(capsys):
-    """Sin NVIDIA_API_KEY sale con código 2 y un mensaje que apunta a .env.example, sin traza."""
+    """Sin la clave del proveedor sale con código 2 y un mensaje que apunta a .env.example, sin traza."""
     assert cli.main(["¿Dónde está el tripulante?"]) == cli.CODIGO_SIN_CLAVE == 2
     error = capsys.readouterr().err
-    assert "NVIDIA_API_KEY" in error and ".env.example" in error
+    assert llm.VAR_CLAVE in error and ".env.example" in error
     assert "Traceback" not in error
 
 
