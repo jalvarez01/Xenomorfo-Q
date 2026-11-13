@@ -190,15 +190,21 @@ Contrato para las herramientas (T11, T12): funciones de Python con argumentos po
 
 Configuración del LLM (`director/llm.py`):
 
+El proveedor es configurable (D15): OpenAI es el principal y NVIDIA NIM queda como alternativa gratuita.
+
 | Variable | Por defecto | Uso |
 |---|---|---|
-| `NVIDIA_API_KEY` | (ninguno) | Obligatoria para `crear_cliente`; si falta, lanza `ClaveFaltanteError`. Nunca se sube al repositorio. |
-| `XQ_MODELO` | `meta/llama-3.3-70b-instruct` | Nombre del modelo. |
-| `XQ_URL_BASE` | `https://integrate.api.nvidia.com/v1` | Backend compatible con OpenAI. |
+| `XQ_PROVEEDOR` | `openai` | `openai` o `nvidia`. Elige la clave, la URL y el modelo por defecto. |
+| `OPENAI_API_KEY` | (ninguno) | Clave de OpenAI; obligatoria para `crear_cliente` con `openai`. Si falta, lanza `ClaveFaltanteError`. |
+| `NVIDIA_API_KEY` | (ninguno) | Clave de NVIDIA NIM; obligatoria para `crear_cliente` con `nvidia`. |
+| `XQ_MODELO` | `gpt-5.4-nano` (openai) o `openai/gpt-oss-20b` (nvidia) | Nombre del modelo. |
+| `XQ_URL_BASE` | la de OpenAI (openai) o `https://integrate.api.nvidia.com/v1` (nvidia) | Backend compatible con OpenAI. |
 | `XQ_TEMPERATURA` | `0` | Temperatura; 0 para casos repetibles. |
 
+Las claves nunca se suben al repositorio ni se imprimen; el mensaje de `ClaveFaltanteError` solo nombra la variable del proveedor elegido.
+
 ```python
-config = cargar_config()          # lee el entorno y .env si existe -> ConfigLLM(modelo, url_base, temperatura)
+config = cargar_config()          # lee el entorno y .env si existe -> ConfigLLM(modelo, url_base, temperatura, proveedor)
 cliente = crear_cliente(config)   # openai.OpenAI; no hace llamadas de red al crearse
 ```
 

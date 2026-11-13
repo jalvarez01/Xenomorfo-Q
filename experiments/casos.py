@@ -139,7 +139,7 @@ def ejecutar_casos(semilla: int = SEMILLA_POR_DEFECTO, salida: str | Path = SALI
         Rutas del JSON y del Markdown escritos.
 
     Raises:
-        ClaveFaltanteError: Si no se pasó cliente y falta NVIDIA_API_KEY.
+        ClaveFaltanteError: Si no se pasó cliente y falta la clave del proveedor.
     """
     config = config if config is not None else cargar_config()
     casos = CASOS if casos is None else casos
