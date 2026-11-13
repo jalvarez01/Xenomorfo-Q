@@ -138,6 +138,16 @@ Escucha solo en `127.0.0.1`, no usa nada de internet salvo la llamada al modelo 
 
 A 1440x900 y a 1366x768 la caja de pregunta y la respuesta más reciente quedan al lado del mapa sin desplazar la página; el historial se desplaza dentro del panel del chat. Después de preguntar C4 en el chat, el mapa muestra la pista hacia Bodega y el avance de 10 ticks: [captura del chat](docs/img/panel_chat.png). La respuesta de esa captura salió parcial (no comparó la distancia antes y después), la misma variación de C4 que se describe en el análisis.
 
+## Panel en línea
+
+El panel también se puede publicar en internet, en una instancia EC2 de AWS con Ubuntu 24.04 detrás de Caddy (decisión D18). La guía paso a paso está en [docs/despliegue.md](docs/despliegue.md) y los archivos en [deploy/](deploy/).
+
+- Caddy es lo único que escucha en internet: da HTTPS con un dominio `<ip>.sslip.io` y pide usuario y contraseña en todo salvo `/salud`. El panel sigue escuchando solo en `127.0.0.1`.
+- Cada visitante tiene su propia partida, por una cookie de sesión: como máximo 30 sesiones, que duran 30 minutos sin uso.
+- El chat tiene cupos para acotar el costo del modelo: 20 preguntas por sesión y 60 por hora en todo el servidor (`XQ_PANEL_MAX_SESION`, `XQ_PANEL_MAX_HORA`; 0 desactiva). Pasado un cupo, el chat avisa y el mapa y el modo Tú siguen funcionando. En local rigen los mismos cupos.
+- `GET /salud` responde `{"ok": true}` para comprobar que el servicio está vivo, y `python -m panel` toma el puerto de `PORT` si no se pasa `--puerto`.
+- La clave del modelo vive solo en `/etc/xenomorfo-q.env` del servidor, con permisos 600.
+
 ## Configuración de la clave
 
 El proveedor del modelo se elige con `XQ_PROVEEDOR` (decisión D15 en [docs/decisiones.md](docs/decisiones.md)):
@@ -212,6 +222,7 @@ Resumen: 5 de 6 correctos y C4 parcial. Las latencias fueron de 1.5 a 4.9 s por 
 - [Entorno](docs/entorno.md): mapas, salas, reglas, bot provisional y limitaciones de la versión 0.
 - [Decisiones](docs/decisiones.md): registro de decisiones de diseño.
 - [Guía de desarrollo](docs/guia-desarrollo.md): instalación, ramas, PR, claves de API y estándar de documentación.
+- [Despliegue](docs/despliegue.md): el panel en una instancia EC2 de AWS detrás de Caddy.
 
 ## Flujo de trabajo
 
