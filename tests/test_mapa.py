@@ -1,4 +1,4 @@
-"""Pruebas de las salas explícitas del mapa (T15)."""
+"""Pruebas de las salas explícitas del mapa (T07)."""
 import pytest
 
 from sim import Mapa
@@ -57,19 +57,19 @@ def test_anotacion_valida_minima():
     assert (m.sala(1, 1), m.sala(3, 1), m.sala(5, 1)) == (0, -1, 1)
 
 
-@pytest.mark.parametrize("salas, nombres", [
-    (["#######", "#00+11#"], ["A", "B"]),                    # tamaño distinto
-    (["#######", "#00+11", "#######"], ["A", "B"]),           # fila más corta
-    (["##0####", "#00+11#", "#######"], ["A", "B"]),          # dígito en pared
-    (["#######", "#0.+11#", "#######"], ["A", "B"]),          # falta dígito en piso
-    (["#######", "#00011#", "#######"], ["A", "B"]),          # dígito en puerta
-    (["#######", "#00+12#", "#######"], ["A", "B"]),          # índice sin nombre
-    (["#######", "#00+00#", "#######"], ["A", "B"]),          # sala 1 sin usar
-    (["#######", "#00+11#", "#######"], None),                # sin nombres
+@pytest.mark.parametrize("salas, nombres, motivo", [
+    (["#######", "#00+11#"], ["A", "B"], "debe medir"),                          # tamaño distinto
+    (["#######", "#00+11", "#######"], ["A", "B"], "debe medir"),                 # fila más corta
+    (["##0####", "#00+11#", "#######"], ["A", "B"], "deben coincidir"),           # dígito en pared
+    (["#######", "#0.+11#", "#######"], ["A", "B"], "Falta el índice de sala"),   # falta dígito en piso
+    (["#######", "#00011#", "#######"], ["A", "B"], "deben coincidir"),           # dígito en puerta
+    (["#######", "#00+12#", "#######"], ["A", "B"], "no tiene nombre"),           # índice sin nombre
+    (["#######", "#00+00#", "#######"], ["A", "B"], "no aparecen en la anotación"),  # sala 1 sin usar
+    (["#######", "#00+11#", "#######"], None, "lista de nombres"),                # sin nombres
 ])
-def test_anotacion_invalida(salas, nombres):
+def test_anotacion_invalida(salas, nombres, motivo):
     """Una anotación con tamaño, símbolos, índices o nombres incorrectos lanza ValueError."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=motivo):
         Mapa(MAPA, salas, nombres)
 
 
@@ -111,3 +111,28 @@ def test_archivo_de_salas_sin_nombres(tmp_path):
     (tmp_path / "chico_salas.txt").write_text("\n".join(SALAS) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="nombres:"):
         Mapa.desde_archivo(ruta)
+
+
+# --- indice_sala (T11, D14) --------------------------------------------------------------
+
+
+@pytest.mark.parametrize("nombre, esperado", [
+    ("Médico", 0), ("medico", 0), ("MÉDICO", 0), ("  medico  ", 0),
+    ("corredor a", 3), ("CORREDOR   A", 3), ("Corredor  B", 4), ("hangar", 7),
+])
+def test_indice_sala_sin_mayusculas_tildes_ni_espacios(vela9, nombre, esperado):
+    """indice_sala encuentra la sala sin importar mayúsculas, tildes ni espacios repetidos."""
+    assert vela9.indice_sala(nombre) == esperado
+
+
+@pytest.mark.parametrize("nombre", ["Enfermería", "Medic", "Corredor", "", "Corredor C"])
+def test_indice_sala_no_adivina(vela9, nombre):
+    """Un nombre que no es el de una sala da ValueError con las salas válidas, sin corregirlo."""
+    with pytest.raises(ValueError, match="no existe. Salas válidas: Médico, Laboratorio"):
+        vela9.indice_sala(nombre)
+
+
+def test_indice_sala_coincide_con_cada_nombre(vela9):
+    """Cada nombre de sala, tal cual, devuelve su propio índice."""
+    for indice, nombre in enumerate(vela9.nombres_salas):
+        assert vela9.indice_sala(nombre) == indice

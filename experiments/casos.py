@@ -1,0 +1,251 @@
+"""Ejecutor de los 6 casos de prueba de la directora con registro de evidencia (apoyo a T21).
+
+Corre cada caso con una Directora nueva (cada caso en su propia partida, con la misma
+semilla) y guarda la evidencia en un JSON y un Markdown: pregunta, valor esperado,
+llamadas a herramientas con argumentos y resultados, respuesta, número de llamadas,
+si se alcanzó el límite, modelo, temperatura, semilla y latencia.
+
+El valor esperado se calcula con las herramientas directamente, sin el modelo, sobre una
+partida nueva con la misma semilla: es la verdad contra la que se compara la respuesta.
+
+Los campos "valoracion" y "correcto" quedan vacíos: la valoración y el análisis son de
+T21 a T23 (Simón Mazo). Nunca se escribe la clave ni ninguna variable de entorno.
+
+Uso:
+    python -m experiments.casos [--semilla 42] [--salida experiments/resultados]
+
+Contenido principal:
+    CASOS: los 6 casos (id, categoria, pregunta, herramientas_esperadas).
+    calcular_esperado: valor esperado de un caso, sin el modelo.
+    ejecutar_casos: corre los casos y escribe los archivos.
+    main: comando.
+
+Tareas relacionadas: T21 (ejecución de casos), T20 (diseño de casos), T22 y T23
+(valoración y análisis), T11 (directora).
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import time
+from datetime import date
+from pathlib import Path
+from typing import Any
+
+from director.directora import Directora
+from director.herramientas import crear_herramientas
+from director.llm import ClaveFaltanteError, ConfigLLM, cargar_config
+from director.partida import SEMILLA_POR_DEFECTO, Partida
+from director.prompt import PROMPT_VERSION
+
+# Carpeta por defecto de los resultados, relativa a la raíz del repositorio.
+SALIDA_POR_DEFECTO = "experiments/resultados"
+# Ticks que avanza el caso C4, los mismos que pide su pregunta.
+TICKS_C4 = 10
+# Código de salida cuando falta la clave, igual que python -m director.
+CODIGO_SIN_CLAVE = 2
+
+CASOS: list[dict[str, Any]] = [
+    {"id": "C1", "categoria": "habitual",
+     "pregunta": "¿En qué sala está el tripulante y a cuántos pasos está el alienígena?",
+     "herramientas_esperadas": ["estado_partida", "ruta_mas_corta"]},
+    {"id": "C2", "categoria": "habitual",
+     "pregunta": "¿El alienígena está viendo al tripulante en este momento?",
+     "herramientas_esperadas": ["ve_tripulante"]},
+    {"id": "C3", "categoria": "habitual",
+     "pregunta": "¿Hacia qué sala se dirige el tripulante?",
+     "herramientas_esperadas": ["predecir_destino"]},
+    {"id": "C4", "categoria": "varias herramientas y acción",
+     "pregunta": ("El alienígena lleva rato perdido: dale una pista hacia la sala donde está "
+                  "el tripulante, avanza 10 ticks y dime si se acercó."),
+     "herramientas_esperadas": ["estado_partida", "dar_pista", "avanzar_simulacion",
+                                "ruta_mas_corta"]},
+    {"id": "C5", "categoria": "límite: sala inexistente",
+     "pregunta": "¿Cuántos pasos hay desde la Enfermería hasta el Hangar?",
+     "herramientas_esperadas": ["ruta_mas_corta"]},
+    {"id": "C6", "categoria": "extra: límite de llamadas",
+     "pregunta": "Calcula la distancia del alienígena a cada una de las 8 salas.",
+     "herramientas_esperadas": ["ruta_mas_corta"]},
+]
+
+
+def calcular_esperado(caso_id: str, semilla: int = SEMILLA_POR_DEFECTO) -> dict:
+    """Valor esperado de un caso, calculado con las herramientas sin el modelo.
+
+    Cada caso usa una partida nueva con la semilla dada, igual que ejecutar_casos.
+
+    Args:
+        caso_id: "C1" a "C6".
+        semilla: Semilla de la partida.
+
+    Returns:
+        Diccionario serializable a JSON con los valores que la respuesta debería dar.
+
+    Raises:
+        ValueError: Si caso_id no es uno de los 6 casos.
+
+    Example:
+        >>> calcular_esperado("C1")
+        {'sala_tripulante': 'Bodega', 'pasos_alienigena_tripulante': 15}
+    """
+    partida = Partida(semilla=semilla)
+    h = crear_herramientas(partida)
+    if caso_id == "C1":
+        return {"sala_tripulante": h["estado_partida"]()["tripulante"]["sala"],
+                "pasos_alienigena_tripulante": h["ruta_mas_corta"]("alienigena", "tripulante")["pasos"]}
+    if caso_id == "C2":
+        return h["ve_tripulante"]()
+    if caso_id == "C3":
+        return h["predecir_destino"]()
+    if caso_id == "C4":
+        sala = h["estado_partida"]()["tripulante"]["sala"]
+        antes = h["ve_tripulante"]()["distancia_casillas"]
+        pista = h["dar_pista"](sala)
+        avance = h["avanzar_simulacion"](TICKS_C4)
+        despues = h["ve_tripulante"]()["distancia_casillas"]
+        return {"sala_pista": sala, "pistas_restantes": pista["pistas_restantes"],
+                "pasos_antes": antes, "pasos_despues": despues, "se_acerco": despues < antes,
+                "capturado": avance["capturado"], "eventos": avance["eventos"]}
+    if caso_id == "C5":
+        try:
+            h["ruta_mas_corta"]("Enfermería", "Hangar")
+        except ValueError as error:
+            return {"error": str(error)}
+        raise AssertionError("La Enfermería no debería existir en el mapa.")
+    if caso_id == "C6":
+        distancias = {sala: h["ruta_mas_corta"]("alienigena", sala)["pasos"]
+                      for sala in partida.env.mapa.nombres_salas}
+        # Hace falta una llamada por sala (8) y el límite es 6: debe declarar el límite.
+        return {"pasos_por_sala": distancias, "llamadas_necesarias": len(distancias),
+                "limite_alcanzado": True}
+    raise ValueError(f"Caso desconocido: {caso_id}. Casos válidos: "
+                     f"{', '.join(c['id'] for c in CASOS)}.")
+
+
+def ejecutar_casos(semilla: int = SEMILLA_POR_DEFECTO, salida: str | Path = SALIDA_POR_DEFECTO,
+                   cliente: Any = None, config: ConfigLLM | None = None,
+                   casos: list[dict] | None = None) -> tuple[Path, Path]:
+    """Corre los casos con una Directora nueva cada uno y escribe JSON y Markdown.
+
+    Args:
+        semilla: Semilla de cada partida.
+        salida: Carpeta donde se escriben los archivos; se crea si no existe.
+        cliente: Cliente del modelo. None usa el real de NVIDIA NIM (necesita la clave).
+        config: Configuración del modelo. None la lee del entorno.
+        casos: Casos a correr. None corre CASOS.
+
+    Returns:
+        Rutas del JSON y del Markdown escritos.
+
+    Raises:
+        ClaveFaltanteError: Si no se pasó cliente y falta NVIDIA_API_KEY.
+    """
+    config = config if config is not None else cargar_config()
+    casos = CASOS if casos is None else casos
+    resultados = []
+    for caso in casos:
+        directora = Directora(semilla=semilla, cliente=cliente, config=config)
+        inicio = time.perf_counter()
+        resultado = directora.preguntar(caso["pregunta"])
+        latencia = time.perf_counter() - inicio
+        resultados.append({
+            **caso,
+            "resultado_esperado": calcular_esperado(caso["id"], semilla),
+            "respuesta": resultado.respuesta,
+            "llamadas": [{"herramienta": r.herramienta, "argumentos": r.argumentos,
+                          "resultado": r.resultado, "segundos": round(r.segundos, 4),
+                          "error": r.error} for r in resultado.registro],
+            "numero_llamadas": resultado.llamadas,
+            "limite_alcanzado": resultado.limite_alcanzado,
+            "latencia_segundos": round(latencia, 3),
+            "valoracion": "",
+            "correcto": None,
+        })
+    informe = {
+        "fecha": date.today().isoformat(),
+        "prompt_version": PROMPT_VERSION,
+        "modelo": config.modelo,
+        "temperatura": config.temperatura,
+        "semilla": semilla,
+        "limite": directora.limite if casos else None,
+        "casos": resultados,
+    }
+    carpeta = Path(salida)
+    carpeta.mkdir(parents=True, exist_ok=True)
+    base = carpeta / f"casos_{informe['fecha']}_prompt{PROMPT_VERSION}_semilla{semilla}"
+    ruta_json = base.with_suffix(".json")
+    ruta_md = base.with_suffix(".md")
+    ruta_json.write_text(json.dumps(informe, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    ruta_md.write_text(_markdown(informe), encoding="utf-8")
+    return ruta_json, ruta_md
+
+
+def _markdown(informe: dict) -> str:
+    """Informe legible de los casos, con los mismos datos del JSON."""
+    lineas = [
+        f"# Casos de prueba de la directora ({informe['fecha']})",
+        "",
+        f"- Modelo: `{informe['modelo']}`, temperatura {informe['temperatura']}",
+        f"- Prompt: versión {informe['prompt_version']}; límite {informe['limite']} llamadas",
+        f"- Semilla: {informe['semilla']} (cada caso en una partida nueva)",
+        "",
+        "| Caso | Categoría | Llamadas | Límite alcanzado | Latencia (s) | Correcto |",
+        "|---|---|---|---|---|---|",
+    ]
+    for c in informe["casos"]:
+        lineas.append(f"| {c['id']} | {c['categoria']} | {c['numero_llamadas']} | "
+                      f"{'sí' if c['limite_alcanzado'] else 'no'} | {c['latencia_segundos']} | |")
+    for c in informe["casos"]:
+        lineas += [
+            "", f"## {c['id']}: {c['categoria']}", "",
+            f"**Pregunta:** {c['pregunta']}", "",
+            f"**Herramientas esperadas:** {', '.join(c['herramientas_esperadas'])}", "",
+            "**Resultado esperado:**", "", "```json",
+            json.dumps(c["resultado_esperado"], ensure_ascii=False, indent=2), "```", "",
+            "**Llamadas:**", "",
+        ]
+        if not c["llamadas"]:
+            lineas.append("Ninguna.")
+        for i, llamada in enumerate(c["llamadas"], start=1):
+            marca = " (error)" if llamada["error"] else ""
+            lineas.append(f"{i}. `{llamada['herramienta']}"
+                          f"({json.dumps(llamada['argumentos'], ensure_ascii=False)})`{marca}: "
+                          f"`{llamada['resultado']}`")
+        lineas += [
+            "", f"**Respuesta:** {c['respuesta']}", "",
+            f"**Llamadas:** {c['numero_llamadas']}. **Límite alcanzado:** "
+            f"{'sí' if c['limite_alcanzado'] else 'no'}. **Latencia:** {c['latencia_segundos']} s.", "",
+            "**Valoración:** (pendiente)", "",
+            "**Correcto:** (pendiente)",
+        ]
+    return "\n".join(lineas) + "\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Corre los casos desde la terminal e imprime las rutas de los archivos.
+
+    Args:
+        argv: Argumentos sin el nombre del programa. None usa sys.argv.
+
+    Returns:
+        0 si todo salió bien, CODIGO_SIN_CLAVE si falta la clave.
+    """
+    parser = argparse.ArgumentParser(prog="python -m experiments.casos",
+                                     description="Corre los 6 casos de prueba de la directora.")
+    parser.add_argument("--semilla", type=int, default=SEMILLA_POR_DEFECTO,
+                        help="Semilla de cada partida (por defecto 42).")
+    parser.add_argument("--salida", default=SALIDA_POR_DEFECTO,
+                        help=f"Carpeta de resultados (por defecto {SALIDA_POR_DEFECTO}).")
+    args = parser.parse_args(argv)
+    try:
+        ruta_json, ruta_md = ejecutar_casos(semilla=args.semilla, salida=args.salida)
+    except ClaveFaltanteError as exc:
+        print(f"No se pueden correr los casos.\n{exc}", file=sys.stderr)
+        return CODIGO_SIN_CLAVE
+    print(f"Resultados en {ruta_json} y {ruta_md}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

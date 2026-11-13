@@ -1,4 +1,4 @@
-"""Pruebas del entorno mínimo de la estación y de la carga de mapas (T06, T10)."""
+"""Pruebas del entorno mínimo de la estación y de la carga de mapas (T07)."""
 import numpy as np
 import pytest
 
