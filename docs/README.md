@@ -7,6 +7,7 @@ Esta carpeta es la única fuente de documentación técnica de Xenomorfo-Q. Todo
 | Documento | Contenido |
 |---|---|
 | [propuesta.md](propuesta.md) | Propuesta del proyecto: problema, opción elegida, herramientas, alcance y plan de pruebas. |
+| [PropuestaDeProyectoFinal.pdf](PropuestaDeProyectoFinal.pdf) | Propuesta entregada al curso, en PDF (versión original; los cambios posteriores, como el proveedor del modelo, están en `decisiones.md`). |
 | [arquitectura.md](arquitectura.md) | Partes del sistema, flujo de una pregunta por el agente y ciclo con límite de llamadas. |
 | [contratos.md](contratos.md) | Interfaces acordadas: entorno, herramientas, agente y alienígena por reglas. |
 | [entorno.md](entorno.md) | Formato de mapas, salas, reglas de movimiento y captura, bot provisional y limitaciones actuales. |
