@@ -125,25 +125,51 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
 .examples{display:flex;flex-direction:column;gap:6px}
 .examples .chip{border-radius:2px;text-align:left;white-space:normal}
 .empty{color:var(--ink-dim);font-size:14px}
+
+/* Diseño para la demostración: el chat va al lado del mapa, con la pregunta arriba y la
+   respuesta más reciente visible sin desplazar la página a 1440x900 y 1366x768. */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1440px;padding:14px 16px 32px}
+.console{grid-template-columns:minmax(0,1fr) 420px;gap:18px}
+.left{display:flex;flex-direction:column;gap:12px;min-width:0}
+.top{padding-bottom:10px;align-items:center}
+h1{font-size:clamp(20px,2.4vw,26px);margin:2px 0 0}
+.instruments{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.side{position:sticky;top:14px;height:calc(100vh - 28px);min-height:520px;display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--rule);border-radius:4px;padding:14px}
+.side h2{font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.06em;color:var(--phos);margin:0}
+.side .sub{margin:0;color:var(--ink-dim);font-size:13px}
+.ask{display:flex;flex-direction:column;gap:8px}
+.ask textarea{width:100%;height:64px;min-height:44px;resize:vertical;background:var(--void);color:var(--ink);border:1px solid var(--rule);border-radius:2px;padding:8px 10px;font-family:var(--f-body);font-size:14px}
+.examples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.examples .chip{border-radius:2px;font-size:11px;padding:4px 8px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.msgs{position:relative;flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px;border-top:1px solid var(--rule);padding-top:10px}
+.msg{background:var(--deck)}
+.msg.latest{border-color:var(--phos-dim)}
+@media (max-width:980px){
+  .console{grid-template-columns:minmax(0,1fr)}
+  .instruments{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;min-height:0}
+  .msgs{max-height:none;overflow:visible}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <div>
-      <div class="eyebrow">Xenomorfo-Q · SI3003 Inteligencia Artificial</div>
-      <h1>Directora de Vela-9</h1>
-      <p class="lede">Una partida real de la simulación: mira cómo caza el alienígena por reglas, juega tú como tripulante y pregúntale a la directora, que consulta la misma partida con sus herramientas.</p>
-    </div>
-    <div class="status">
-      <span class="pill" id="livePill"><span class="dot"></span><span id="liveTxt">En pausa</span></span>
-      <span class="pill">T+<span id="tick">0000</span></span>
-      <span class="pill" id="modelPill">Modelo: --</span>
-    </div>
-  </header>
-
   <main class="console">
-    <section class="screen-col" aria-label="Partida">
+    <div class="left">
+      <header class="top">
+        <div>
+          <div class="eyebrow">Xenomorfo-Q · SI3003 Inteligencia Artificial</div>
+          <h1>Directora de Vela-9</h1>
+        </div>
+        <div class="status">
+          <span class="pill" id="livePill"><span class="dot"></span><span id="liveTxt">En pausa</span></span>
+          <span class="pill">T+<span id="tick">0000</span></span>
+          <span class="pill" id="modelPill">Modelo: --</span>
+        </div>
+      </header>
+
+      <section class="screen-col" aria-label="Partida">
       <div class="screen">
         <canvas id="map" role="img" aria-label="Mapa de Vela-9 con el tripulante, el alienígena, su campo de visión y su ruta"></canvas>
         <div class="scan" aria-hidden="true"></div>
@@ -196,7 +222,7 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
       </div>
     </section>
 
-    <aside class="instruments" aria-label="Instrumentos">
+      <section class="instruments" aria-label="Instrumentos">
       <div class="inst">
         <div class="inst-head"><span>Estado de la partida</span><span class="mono" id="endTag">en juego</span></div>
         <div class="stats">
@@ -223,28 +249,26 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
         <div class="inst-head"><span>Registro</span><span class="mono">eventos y herramientas</span></div>
         <ul id="log"></ul>
       </div>
-    </aside>
-  </main>
-
-  <section class="chat" aria-label="Directora">
-    <div>
-      <h2>Pregúntale a la directora</h2>
-      <p class="sub">Responde sobre esta misma partida usando sus herramientas. Si da una pista o avanza la simulación, el mapa cambia.</p>
-      <div class="msgs" id="msgs"><p class="empty" id="emptyChat">Todavía no hay preguntas en esta partida.</p></div>
+      </section>
     </div>
-    <div class="ask">
-      <label class="row-label" for="question">Pregunta</label>
-      <textarea id="question" maxlength="500" placeholder="Por ejemplo: ¿hacia qué sala se dirige el tripulante?"></textarea>
-      <button id="send" class="btn primary" type="button">Preguntar</button>
-      <span class="row-label">Ejemplos (casos C1 a C4)</span>
+
+    <aside class="side" aria-label="Directora">
+      <h2>Pregúntale a la directora</h2>
+      <p class="sub">Responde sobre esta misma partida con sus herramientas; si da una pista o avanza la simulación, el mapa cambia.</p>
+      <div class="ask">
+        <label class="sr-only" for="question">Pregunta</label>
+        <textarea id="question" maxlength="500" placeholder="Por ejemplo: ¿hacia qué sala se dirige el tripulante?"></textarea>
+        <button id="send" class="btn primary" type="button">Preguntar</button>
+      </div>
       <div class="examples" id="examples">
         <button class="chip" type="button">¿En qué sala está el tripulante y a cuántos pasos está el alienígena?</button>
         <button class="chip" type="button">¿El alienígena está viendo al tripulante en este momento?</button>
         <button class="chip" type="button">¿Hacia qué sala se dirige el tripulante?</button>
         <button class="chip" type="button">El alienígena lleva rato perdido: dale una pista hacia la sala donde está el tripulante, avanza 10 ticks y dime si se acercó.</button>
       </div>
-    </div>
-  </section>
+      <div class="msgs" id="msgs" aria-live="polite"></div>
+    </aside>
+  </main>
 </div>
 
 <script>
@@ -252,6 +276,8 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
   "use strict";
   const $ = (id) => document.getElementById(id);
   const SPEEDS = [0, 650, 380, 220, 120];
+  // Mismo orden que el panel de reglas y que RAMAS en panel/sesion.py.
+  const RAMAS = ["persigue", "ultima_casilla", "pista", "patrulla"];
   const layers = { vision: true, path: true, trail: true, hint: true };
   let MAPA = null, E = null, prev = null, animStart = 0;
   let running = false, inFlight = false, busy = false, speed = 2, pilot = "bot", lastTick = 0;
@@ -405,7 +431,8 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
     $("tick").textContent = String(E.tick).padStart(4, "0");
     $("seedTag").textContent = `Vela-9 · semilla ${E.semilla}`;
     $("modelPill").textContent = `Modelo: ${E.modelo}`;
-    $("modeTag").textContent = `Alienígena · ${E.alien.estado}`;
+    // Etiqueta y panel de reglas salen del mismo campo (rama), calculado en el servidor.
+    $("modeTag").textContent = `Alienígena · ${E.alien.rama_texto}`;
     texto("crewRoom", E.tripulante.sala || "--");
     texto("alienRoom", E.alien.sala || "--");
     texto("sees", E.ve ? "Sí" : "No", E.ve ? "hot" : "");
@@ -415,7 +442,7 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
     const fin = $("endTag");
     fin.textContent = E.capturado ? "captura" : E.terminado ? "fin del tiempo" : "en juego";
     fin.style.color = E.capturado ? T("--threat") : "";
-    const nodo = E.ve ? 0 : (E.alien.estado === "persigue" && E.alien.busca_ultima_vista) ? 1 : E.alien.estado === "va a la pista" ? 2 : 3;
+    const nodo = RAMAS.indexOf(E.alien.rama);
     document.querySelectorAll("#bt li").forEach((li, i) => { li.classList.toggle("active", i === nodo); li.classList.toggle("hot", i === nodo && nodo === 0); });
     const log = $("log"); log.replaceChildren();
     for (const r of E.registro.slice().reverse()) {
@@ -464,7 +491,10 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
     }
     if (transientError) cont.append(burbuja("error", transientError.pregunta, transientError.texto));
     if (pendingQuestion) cont.append(burbuja("pending", pendingQuestion, "Consultando a la directora..."));
-    cont.scrollTop = cont.scrollHeight;
+    // La respuesta más reciente queda arriba del área visible: se lee desde su inicio sin
+    // desplazar la página, y el historial anterior sigue disponible hacia arriba.
+    const ultimo = cont.lastElementChild;
+    if (ultimo && ultimo.classList.contains("msg")) { ultimo.classList.add("latest"); cont.scrollTop = ultimo.offsetTop - 4; }
   }
   async function preguntar(texto) {
     texto = (texto || "").trim();
@@ -519,7 +549,7 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
   const TECLAS = { ArrowUp: "arriba", ArrowDown: "abajo", ArrowLeft: "izquierda", ArrowRight: "derecha",
                    w: "arriba", s: "abajo", a: "izquierda", d: "derecha", " ": "quieto" };
   window.addEventListener("keydown", (e) => {
-    if (pilot !== "you") return;
+    if (pilot !== "you" || e.repeat) return;  // mantener la tecla no repite movimientos
     const tag = (e.target && e.target.tagName) || "";
     if (tag === "INPUT" || tag === "TEXTAREA") return;
     const dir = TECLAS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
@@ -527,7 +557,10 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
   });
   $("send").addEventListener("click", () => preguntar($("question").value));
   $("question").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); preguntar($("question").value); } });
-  document.querySelectorAll("#examples .chip").forEach((b) => b.addEventListener("click", () => { $("question").value = b.textContent; preguntar(b.textContent); }));
+  document.querySelectorAll("#examples .chip").forEach((b) => {
+    b.title = b.textContent;  // el texto se recorta en pantalla; la pregunta completa queda en el título
+    b.addEventListener("click", () => { $("question").value = b.textContent; preguntar(b.textContent); });
+  });
 
   /* ---------- Bucle ---------- */
   function cuadro(ahora) {
@@ -541,6 +574,8 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border
       dimensionar();
       aplicar((await api("/api/estado")).datos);
       $("seed").value = E.semilla;
+      // ?modo=tu abre directamente en modo de juego (útil para la demostración).
+      if (new URLSearchParams(location.search).get("modo") === "tu") setPilot("you");
     } catch (e) { mostrarAviso("No hay conexión con el servidor del panel."); }
     if (window.ResizeObserver) new ResizeObserver(dimensionar).observe(mapC.parentElement);
     else window.addEventListener("resize", dimensionar);

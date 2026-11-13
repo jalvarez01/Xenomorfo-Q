@@ -10,7 +10,9 @@ repetir parte de la clave): solo el nombre del error.
 
 Contenido principal:
     Sesion: mapa, estado, paso, mover, preguntar y reiniciar.
-    objetivo_alien: casilla a la que va el alienígena según su árbol, sin modificarlo.
+    rama_alien: rama activa del árbol del alienígena y su casilla objetivo, sin modificarlo.
+    objetivo_alien: solo la casilla objetivo (para dibujar la ruta).
+    RAMAS: nombre visible de cada rama del árbol.
     DIRECCIONES: nombre de cada dirección y su acción (0 a 3).
 
 Tareas relacionadas: T24 (demostración), T11 (directora), T18 y T19 (alienígena), D16.
@@ -32,6 +34,10 @@ from sim.rutas import ruta
 DIRECCIONES = {"arriba": 0, "derecha": 1, "abajo": 2, "izquierda": 3, "quieto": 4}
 # Nombre de la dirección del alienígena, para los instrumentos.
 NOMBRES_DIRECCION = dict(zip(DIRS, ("arriba", "derecha", "abajo", "izquierda")))
+# Ramas del árbol de AlienReglas, en orden de prioridad, con su nombre visible. La etiqueta
+# del mapa y el panel de reglas usan esta misma clave, así nunca se contradicen.
+RAMAS = {"persigue": "Persigue", "ultima_casilla": "Última casilla vista",
+         "pista": "Va a la pista", "patrulla": "Patrulla"}
 # Largo del rastro del tripulante que se dibuja, en casillas.
 LARGO_RASTRO = 12
 # Entradas del registro que se envían al navegador (las más recientes).
@@ -42,28 +48,39 @@ LARGO_RESULTADO = 160
 LARGO_PREGUNTA = 500
 
 
-def objetivo_alien(alien: AlienReglas) -> tuple[int, int]:
-    """Casilla hacia la que va el alienígena, leyendo su árbol de reglas sin modificarlo.
+def rama_alien(alien: AlienReglas) -> tuple[str, tuple[int, int]]:
+    """Rama del árbol que el alienígena va a seguir y su casilla objetivo, sin modificarlo.
 
     Repite el orden de AlienReglas.decidir (lo ve, última casilla vista, pista, patrulla)
-    sin llamar a decidir, que cambia su estado. Sirve para dibujar la ruta prevista.
+    sin llamar a decidir, que cambia su estado. La etiqueta del mapa, el panel de reglas y
+    la ruta dibujada salen de este mismo cálculo.
 
     Args:
         alien: El alienígena de la partida.
 
     Returns:
-        Casilla (x, y) objetivo.
+        (rama, objetivo): una clave de RAMAS y la casilla (x, y) a la que va.
+
+    Example:
+        >>> s = Sesion(semilla=42)
+        >>> rama_alien(s.directora.partida.alien)[0]
+        'patrulla'
     """
     env = alien.env
     x, y = env.tripulante
     if env.campo_vision[y, x]:
-        return env.tripulante
+        return "persigue", env.tripulante
     if alien.ultima_vista is not None and env.alien != alien.ultima_vista:
-        return alien.ultima_vista
+        return "ultima_casilla", alien.ultima_vista
     if alien.pista is not None:
-        return alien.centros[alien.pista]
-    # _objetivo es el centro de patrulla actual; solo se lee para dibujar la ruta.
-    return alien.centros[alien._objetivo]
+        return "pista", alien.centros[alien.pista]
+    # _objetivo es el centro de patrulla actual; solo se lee para mostrarlo.
+    return "patrulla", alien.centros[alien._objetivo]
+
+
+def objetivo_alien(alien: AlienReglas) -> tuple[int, int]:
+    """Casilla hacia la que va el alienígena (la de rama_alien)."""
+    return rama_alien(alien)[1]
 
 
 def _una_linea(texto: str) -> str:
@@ -155,7 +172,8 @@ class Sesion:
             env, alien = partida.env, partida.alien
             camino = ruta(env.mapa, env.alien, env.tripulante)
             capturado = env._captura()
-            ruta_prevista = ruta(env.mapa, env.alien, objetivo_alien(alien)) or [env.alien]
+            rama, objetivo = rama_alien(alien)
+            ruta_prevista = ruta(env.mapa, env.alien, objetivo) or [env.alien]
             # nonzero() da enteros de numpy; JSON necesita int de Python.
             vision = [[int(x), int(y)] for y, x in zip(*env.campo_vision.nonzero())]
             return {
@@ -170,7 +188,7 @@ class Sesion:
                           "sala": partida.nombre_sala(partida.ultima_sala_alien()),
                           "direccion": NOMBRES_DIRECCION[env.direccion_alien],
                           "dx": env.direccion_alien[0], "dy": env.direccion_alien[1],
-                          "estado": alien.estado, "busca_ultima_vista": alien.ultima_vista is not None},
+                          "rama": rama, "rama_texto": RAMAS[rama]},
                 "ve": bool(env.campo_vision[env.tripulante[1], env.tripulante[0]]),
                 "distancia": None if camino is None else len(camino) - 1,
                 "pistas_restantes": alien.pistas_restantes,

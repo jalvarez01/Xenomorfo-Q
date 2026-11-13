@@ -101,6 +101,12 @@ def test_pagina_sin_recursos_externos(servidor):
     assert "http://" not in pagina and "https://" not in pagina
 
 
+def test_pagina_con_parametros(servidor):
+    """La página también se sirve con parámetros, como ?modo=tu para abrir en modo de juego."""
+    codigo, pagina = servidor("/?modo=tu")
+    assert codigo == 200 and "<canvas id=\"map\"" in pagina
+
+
 def test_mapa(servidor):
     """GET /api/mapa da las filas de vela9, las 8 salas y una etiqueta por sala."""
     codigo, mapa = servidor("/api/mapa")
@@ -312,3 +318,46 @@ def test_objetivo_alien_no_modifica_el_alien():
     objetivo_alien(alien)
     s.estado()
     assert antes == (alien.estado, alien.ultima_vista, alien.pista, alien._objetivo, set(alien._visitadas))
+
+
+# --- Rama del árbol del alienígena (etiqueta del mapa y panel de reglas) ---------------------
+
+
+def _sesion_con(alien, tripulante, direccion, ultima_vista=None, pista=None) -> Sesion:
+    """Sesión de vela9 con el alienígena y el tripulante en casillas elegidas."""
+    from sim.percepcion import campo_de_vision
+    s = Sesion(semilla=42)
+    env, a = s.directora.partida.env, s.directora.partida.alien
+    env.alien, env.tripulante, env.direccion_alien = alien, tripulante, direccion
+    env.campo_vision = campo_de_vision(env.mapa, env.alien, env.direccion_alien)
+    a.ultima_vista, a.pista = ultima_vista, pista
+    return s
+
+
+@pytest.mark.parametrize("caso, esperado", [
+    ({"alien": (10, 3), "tripulante": (12, 3), "direccion": (1, 0)}, "persigue"),
+    ({"alien": (10, 3), "tripulante": (2, 12), "direccion": (1, 0), "ultima_vista": (13, 3)}, "ultima_casilla"),
+    ({"alien": (10, 3), "tripulante": (2, 12), "direccion": (1, 0), "pista": 5}, "pista"),
+    ({"alien": (10, 3), "tripulante": (2, 12), "direccion": (1, 0)}, "patrulla"),
+    # Si ya llegó a la última casilla vista y no lo ve, esa rama no aplica.
+    ({"alien": (10, 3), "tripulante": (2, 12), "direccion": (1, 0), "ultima_vista": (10, 3)}, "patrulla"),
+])
+def test_rama_del_alien(caso, esperado):
+    """La rama sigue el orden del árbol: lo ve, última casilla vista, pista, patrulla."""
+    from panel.sesion import RAMAS, rama_alien
+    s = _sesion_con(**caso)
+    rama, objetivo = rama_alien(s.directora.partida.alien)
+    e = s.estado()
+    assert rama == esperado == e["alien"]["rama"]
+    assert e["alien"]["rama_texto"] == RAMAS[esperado]
+    assert e["ruta"][-1] == list(objetivo)  # la ruta dibujada va al objetivo de esa misma rama
+
+
+def test_la_pagina_usa_un_solo_campo_para_la_rama():
+    """La etiqueta del mapa y el panel de reglas leen rama, no el estado interno del alienígena."""
+    from panel.servidor import PAGINA
+    from panel.sesion import RAMAS
+    pagina = PAGINA.read_text(encoding="utf-8")
+    assert "E.alien.rama_texto" in pagina and "RAMAS.indexOf(E.alien.rama)" in pagina
+    assert "E.alien.estado" not in pagina
+    assert f"const RAMAS = {json.dumps(list(RAMAS))};" in pagina
