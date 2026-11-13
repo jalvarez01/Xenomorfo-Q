@@ -75,6 +75,7 @@ Los ejemplos de los docstrings se pueden verificar con `python -m pytest --docte
 - En Colab: guardar la clave en los secretos del notebook y no escribirla en ninguna celda.
 - Nunca se sube una clave al repositorio, ni en código, ni en notebooks, ni en commits.
 - Antes de cada commit y de abrir cada PR, correr `git grep -nE "nvapi-[A-Za-z0-9]|sk-[A-Za-z0-9]{20,}"` y confirmar que no aparece nada, también sobre notebooks y archivos de resultados. El patrón busca claves reales de NVIDIA (`nvapi-`) y de OpenAI (`sk-` seguido de al menos 20 caracteres) y no coincide con esta misma línea.
+- Para que esa revisión sea automática, instalar una vez por clon el hook que bloquea el commit si los cambios preparados tienen algo con forma de clave (muestra el archivo, nunca el valor): `cp scripts/revisar_claves.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`.
 - Las pruebas nunca llaman a la API real: usan un cliente falso que simula las respuestas del modelo.
 
 ## Lista de revisión del PR
