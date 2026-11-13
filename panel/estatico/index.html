@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Xenomorfo-Q: panel de Vela-9</title>
+<!--
+  Panel visual local de Xenomorfo-Q (D16). Todo lo que se dibuja sale de la API del
+  servidor (panel/servidor.py), que lee la simulación y el agente reales. Esta página no
+  simula nada: solo dibuja, anima entre ticks y manda acciones. Sin recursos externos,
+  para que funcione sin internet.
+-->
+<style>
+:root{
+  --void:#081110;--deck:#0e1a19;--panel:#11201e;--rule:#24403b;
+  --phos:#ffb84d;--phos-dim:#a87a35;--on-phos:#1c1307;
+  --ink:#e9dfc8;--ink-dim:#8e9c94;--crew:#6fe0d0;--threat:#ff5b3a;
+  --f-display:"Avenir Next Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.5}
+[hidden]{display:none!important}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 16px 48px;display:flex;flex-direction:column;gap:20px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--rule);padding-bottom:14px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--phos-dim)}
+h1{font-family:var(--f-display);font-weight:600;font-size:clamp(22px,3.2vw,32px);letter-spacing:.06em;line-height:1.2;margin:6px 0 0;color:var(--phos)}
+.lede{margin:6px 0 0;max-width:68ch;color:var(--ink-dim)}
+.status{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--rule);padding:5px 10px;border-radius:2px;color:var(--ink-dim);display:inline-flex;align-items:center;gap:8px}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-dim)}
+.pill.running{color:var(--ink);border-color:var(--phos-dim)}
+.pill.running .dot{background:var(--threat);animation:blink 1.1s steps(2,start) infinite}
+.pill.hot{color:var(--threat);border-color:var(--threat)}
+@keyframes blink{to{visibility:hidden}}
+.console{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start}
+@media (max-width:980px){.console{grid-template-columns:minmax(0,1fr)}}
+.screen-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.screen{position:relative;border:1px solid var(--rule);background:var(--void);border-radius:4px;overflow:hidden}
+.screen canvas{display:block;width:100%}
+.scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,.22) 2px 3px)}
+.scan::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 90px rgba(0,0,0,.6)}
+.screen-tag{position:absolute;top:7px;font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--phos);background:var(--void);padding:2px 7px;border:1px solid var(--rule)}
+.screen-tag.tl{left:8px}.screen-tag.tr{right:8px;color:var(--ink)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.ctrl-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);background:var(--panel);border:1px solid var(--rule);padding:9px 14px;border-radius:2px;cursor:pointer;min-height:38px}
+.btn:hover:not(:disabled){border-color:var(--phos-dim)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--phos);color:var(--on-phos);border-color:var(--phos);min-width:108px}
+.btn.primary:hover:not(:disabled){background:var(--ink);border-color:var(--ink)}
+.btn:focus-visible,.chip:focus-visible,.seg-btn:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--crew);outline-offset:2px}
+.seed{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim)}
+.seed input{width:72px;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:2px;padding:7px 8px;font-family:var(--f-mono)}
+.speed{display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim)}
+.speed input{accent-color:var(--phos);width:110px}
+.speed output{color:var(--phos);min-width:2.4ch}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row-label{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);margin-right:4px}
+.chip{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;color:var(--ink-dim);background:transparent;border:1px solid var(--rule);border-radius:20px;padding:5px 12px 5px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.chip i{width:9px;height:9px;border-radius:2px;display:inline-block;opacity:.35}
+.chip[aria-pressed="true"]{color:var(--ink);border-color:var(--phos-dim)}
+.chip[aria-pressed="true"] i{opacity:1}
+.sw-vision{background:var(--threat)}.sw-path{background:transparent;border:1px dashed var(--threat)}.sw-trail{background:var(--crew)}.sw-hint{background:var(--phos)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+.seg-btn{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);background:transparent;border:0;padding:8px 12px;cursor:pointer;min-height:36px}
+.seg-btn+.seg-btn{border-left:1px solid var(--rule)}
+.seg-btn[aria-pressed="true"]{background:var(--panel);color:var(--crew)}
+.pad-wrap{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.pad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,44px);gap:6px}
+.pad .btn{padding:0;font-size:16px}
+.pad .up{grid-column:2;grid-row:1}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}.pad .stay{grid-column:3;grid-row:1;font-size:11px}
+.hint{margin:0;font-size:13px;color:var(--ink-dim);max-width:62ch}
+kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);border-radius:2px;padding:0 5px;color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink-dim)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend b{width:10px;height:10px;border-radius:50%;display:inline-block}
+.lg-crew{background:var(--crew)}.lg-agent{background:var(--threat)}.lg-locker{border-radius:1px!important;background:transparent;border:1.5px solid var(--phos)}
+.instruments{display:flex;flex-direction:column;gap:12px;min-width:0}
+.inst{background:var(--panel);border:1px solid var(--rule);border-radius:4px;padding:12px 14px}
+.inst-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:10px}
+.inst-head .mono{letter-spacing:.04em;color:var(--phos);font-size:12px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.stats div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stats .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.stats .v{font-size:17px;color:var(--ink);overflow-wrap:anywhere}
+.stats .v.hot{color:var(--threat)}.stats .v.ok{color:var(--crew)}.stats .v.amber{color:var(--phos)}
+.bt{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.bt li{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:6px 8px;border-radius:2px;color:var(--ink-dim)}
+.bt li::before{content:""}
+.bt .cond{font-size:14px}
+.bt .act{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.bt li.active{background:rgba(255,184,77,.1);color:var(--phos)}
+.bt li.active::before{content:"\25B8"}
+.bt li.active.hot{background:rgba(255,91,58,.12);color:var(--threat)}
+.log ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:13px;max-height:260px;overflow:auto}
+.log li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;color:var(--ink-dim)}
+.log li time{font-family:var(--f-mono);font-size:11px;color:var(--phos-dim);padding-top:1px}
+.log li span{overflow-wrap:anywhere}
+.log li.agente span{color:var(--phos)}
+.log li.hot span{color:var(--threat)}
+.log li.crew span{color:var(--crew)}
+.chat{border-top:1px solid var(--rule);padding-top:18px;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px}
+@media (max-width:980px){.chat{grid-template-columns:minmax(0,1fr)}}
+.chat h2{font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.06em;color:var(--phos);margin:0 0 4px}
+.chat .sub{margin:0 0 12px;color:var(--ink-dim);font-size:14px}
+.msgs{display:flex;flex-direction:column;gap:12px;max-height:520px;overflow:auto;padding-right:4px}
+.msg{background:var(--deck);border:1px solid var(--rule);border-radius:4px;padding:12px 14px}
+.msg .q{font-family:var(--f-mono);font-size:12px;color:var(--crew);margin-bottom:8px}
+.msg .a{white-space:pre-wrap;overflow-wrap:anywhere}
+.msg .calls{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-family:var(--f-mono);font-size:12px;color:var(--ink-dim)}
+.msg .calls li{overflow-wrap:anywhere}
+.msg .calls li.err{color:var(--threat)}
+.msg .meta{margin-top:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--ink-dim)}
+.msg .limit{margin-top:8px;font-family:var(--f-mono);font-size:12px;color:var(--threat);border:1px solid var(--threat);border-radius:2px;padding:4px 8px;display:inline-block}
+.msg.error{border-color:var(--threat)}
+.msg.error .a{color:var(--threat)}
+.msg.pending .a{color:var(--ink-dim)}
+.ask{display:flex;flex-direction:column;gap:10px}
+.ask textarea{width:100%;min-height:92px;resize:vertical;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:2px;padding:10px;font-family:var(--f-body);font-size:15px}
+.examples{display:flex;flex-direction:column;gap:6px}
+.examples .chip{border-radius:2px;text-align:left;white-space:normal}
+.empty{color:var(--ink-dim);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Xenomorfo-Q · SI3003 Inteligencia Artificial</div>
+      <h1>Directora de Vela-9</h1>
+      <p class="lede">Una partida real de la simulación: mira cómo caza el alienígena por reglas, juega tú como tripulante y pregúntale a la directora, que consulta la misma partida con sus herramientas.</p>
+    </div>
+    <div class="status">
+      <span class="pill" id="livePill"><span class="dot"></span><span id="liveTxt">En pausa</span></span>
+      <span class="pill">T+<span id="tick">0000</span></span>
+      <span class="pill" id="modelPill">Modelo: --</span>
+    </div>
+  </header>
+
+  <main class="console">
+    <section class="screen-col" aria-label="Partida">
+      <div class="screen">
+        <canvas id="map" role="img" aria-label="Mapa de Vela-9 con el tripulante, el alienígena, su campo de visión y su ruta"></canvas>
+        <div class="scan" aria-hidden="true"></div>
+        <div class="screen-tag tl" id="seedTag">Vela-9 · semilla 42</div>
+        <div class="screen-tag tr" id="modeTag">Alienígena · patrulla</div>
+      </div>
+
+      <div class="controls">
+        <div class="ctrl-group">
+          <button id="play" class="btn primary" type="button">Iniciar</button>
+          <button id="step" class="btn" type="button">Paso</button>
+          <button id="reset" class="btn" type="button">Reiniciar</button>
+          <label class="seed" for="seed">Semilla <input id="seed" type="number" value="42" step="1"></label>
+        </div>
+        <label class="speed" for="speed">Velocidad <input id="speed" type="range" min="1" max="4" step="1" value="2"><output id="speedOut" for="speed">2x</output></label>
+      </div>
+
+      <div class="row" role="group" aria-label="Capas del mapa">
+        <span class="row-label">Capas</span>
+        <button class="chip" type="button" data-layer="vision" aria-pressed="true"><i class="sw-vision"></i>Visión</button>
+        <button class="chip" type="button" data-layer="path" aria-pressed="true"><i class="sw-path"></i>Ruta A*</button>
+        <button class="chip" type="button" data-layer="trail" aria-pressed="true"><i class="sw-trail"></i>Rastro</button>
+        <button class="chip" type="button" data-layer="hint" aria-pressed="true"><i class="sw-hint"></i>Sala de la pista</button>
+      </div>
+
+      <div class="row">
+        <span class="row-label">Tripulante</span>
+        <div class="seg" role="group" aria-label="Quién controla al tripulante">
+          <button id="modeBot" class="seg-btn" type="button" aria-pressed="true">Bot</button>
+          <button id="modeYou" class="seg-btn" type="button" aria-pressed="false">Tú</button>
+        </div>
+      </div>
+
+      <div id="youPanel" class="pad-wrap" hidden>
+        <div class="pad" role="group" aria-label="Mover tripulante">
+          <button class="btn up" type="button" data-mv="arriba" aria-label="Arriba">&uarr;</button>
+          <button class="btn stay" type="button" data-mv="quieto" aria-label="Quedarse quieto">Quieto</button>
+          <button class="btn left" type="button" data-mv="izquierda" aria-label="Izquierda">&larr;</button>
+          <button class="btn down" type="button" data-mv="abajo" aria-label="Abajo">&darr;</button>
+          <button class="btn right" type="button" data-mv="derecha" aria-label="Derecha">&rarr;</button>
+        </div>
+        <p class="hint">Cada movimiento es un tick: el alienígena decide con sus reglas y tú te mueves. <kbd>Flechas</kbd> o <kbd>WASD</kbd> para moverte y <kbd>Espacio</kbd> para quedarte quieto. Los casilleros no esconden en esta versión de la simulación.</p>
+      </div>
+
+      <div class="legend" aria-label="Leyenda">
+        <span><b class="lg-crew"></b>Tripulante</span>
+        <span><b class="lg-agent"></b>Alienígena</span>
+        <span><b class="lg-locker"></b>Casillero</span>
+        <span>1 casilla = 2 m</span>
+      </div>
+    </section>
+
+    <aside class="instruments" aria-label="Instrumentos">
+      <div class="inst">
+        <div class="inst-head"><span>Estado de la partida</span><span class="mono" id="endTag">en juego</span></div>
+        <div class="stats">
+          <div><span class="k">Tripulante en</span><span class="v" id="crewRoom">--</span></div>
+          <div><span class="k">Alienígena en</span><span class="v" id="alienRoom">--</span></div>
+          <div><span class="k">¿Lo ve?</span><span class="v" id="sees">--</span></div>
+          <div><span class="k">Distancia A*</span><span class="v mono" id="dist">--</span></div>
+          <div><span class="k">Pistas</span><span class="v mono" id="hints">--</span></div>
+          <div><span class="k">Pista activa</span><span class="v" id="activeHint">--</span></div>
+        </div>
+      </div>
+
+      <div class="inst">
+        <div class="inst-head"><span>Alienígena por reglas</span><span class="mono">prioridad &darr;</span></div>
+        <ol class="bt" id="bt">
+          <li><span class="cond">¿Lo ve?</span><span class="act">Persigue</span></li>
+          <li><span class="cond">¿Lo perdió de vista?</span><span class="act">Última casilla</span></li>
+          <li><span class="cond">¿Pista vigente?</span><span class="act">Va a la pista</span></li>
+          <li><span class="cond">Sin pistas</span><span class="act">Patrulla</span></li>
+        </ol>
+      </div>
+
+      <div class="inst log">
+        <div class="inst-head"><span>Registro</span><span class="mono">eventos y herramientas</span></div>
+        <ul id="log"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <section class="chat" aria-label="Directora">
+    <div>
+      <h2>Pregúntale a la directora</h2>
+      <p class="sub">Responde sobre esta misma partida usando sus herramientas. Si da una pista o avanza la simulación, el mapa cambia.</p>
+      <div class="msgs" id="msgs"><p class="empty" id="emptyChat">Todavía no hay preguntas en esta partida.</p></div>
+    </div>
+    <div class="ask">
+      <label class="row-label" for="question">Pregunta</label>
+      <textarea id="question" maxlength="500" placeholder="Por ejemplo: ¿hacia qué sala se dirige el tripulante?"></textarea>
+      <button id="send" class="btn primary" type="button">Preguntar</button>
+      <span class="row-label">Ejemplos (casos C1 a C4)</span>
+      <div class="examples" id="examples">
+        <button class="chip" type="button">¿En qué sala está el tripulante y a cuántos pasos está el alienígena?</button>
+        <button class="chip" type="button">¿El alienígena está viendo al tripulante en este momento?</button>
+        <button class="chip" type="button">¿Hacia qué sala se dirige el tripulante?</button>
+        <button class="chip" type="button">El alienígena lleva rato perdido: dale una pista hacia la sala donde está el tripulante, avanza 10 ticks y dime si se acercó.</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const SPEEDS = [0, 650, 380, 220, 120];
+  const layers = { vision: true, path: true, trail: true, hint: true };
+  let MAPA = null, E = null, prev = null, animStart = 0;
+  let running = false, inFlight = false, busy = false, speed = 2, pilot = "bot", lastTick = 0;
+  let flashAt = -1e9, pendingQuestion = null, transientError = null;
+
+  /* ---------- API ---------- */
+  async function api(ruta, cuerpo) {
+    const opciones = cuerpo === undefined ? {} : {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo)
+    };
+    const r = await fetch(ruta, opciones);
+    return { ok: r.ok, datos: await r.json() };
+  }
+  function aplicar(estado) {
+    if (!estado) return;
+    const antes = E;
+    prev = antes ? { t: [antes.tripulante.x, antes.tripulante.y], a: [antes.alien.x, antes.alien.y] } : null;
+    E = estado; animStart = performance.now();
+    if (E.capturado && (!antes || !antes.capturado)) flashAt = performance.now();
+    if (E.terminado) setRunning(false);
+    actualizarUI();
+  }
+  async function accion(ruta, cuerpo) {
+    if (inFlight) return;
+    inFlight = true;
+    try {
+      const { ok, datos } = await api(ruta, cuerpo);
+      aplicar(datos.estado || (ok ? datos : null));
+      if (!ok && datos.error) mostrarAviso(datos.error);
+    } catch (e) {
+      setRunning(false); mostrarAviso("No hay conexión con el servidor del panel.");
+    } finally { inFlight = false; }
+  }
+
+  /* ---------- Mapa estático ---------- */
+  const mapC = $("map"), ctx = mapC.getContext("2d"), fondo = document.createElement("canvas");
+  let CS = 24, DPR = 1;
+  const css = getComputedStyle(document.documentElement), T = (n) => css.getPropertyValue(n).trim();
+  const C = { void: T("--void"), deck: T("--deck"), rule: T("--rule"), phos: T("--phos"), phosDim: T("--phos-dim"),
+              crew: T("--crew"), threat: T("--threat"), ink: T("--ink") };
+  const FM = T("--f-mono"), FD = T("--f-display");
+  function rgba(hex, a) { const n = parseInt(hex.replace("#", ""), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; }
+  const pared = (x, y) => x < 0 || y < 0 || x >= MAPA.ancho || y >= MAPA.alto || MAPA.filas[y][x] === "#";
+
+  function dimensionar() {
+    if (!MAPA) return;
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    const w = mapC.parentElement.clientWidth; CS = w / MAPA.ancho;
+    mapC.width = Math.round(w * DPR); mapC.height = Math.round(CS * MAPA.alto * DPR);
+    mapC.style.height = (CS * MAPA.alto) + "px";
+    construirFondo();
+  }
+  function construirFondo() {
+    const W = MAPA.ancho, H = MAPA.alto;
+    fondo.width = mapC.width; fondo.height = mapC.height;
+    const g = fondo.getContext("2d"); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.fillStyle = C.void; g.fillRect(0, 0, W * CS, H * CS);
+    g.strokeStyle = rgba(C.phos, 0.05); g.lineWidth = 1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (pared(x, y)) { g.beginPath(); g.moveTo(x * CS, (y + 1) * CS); g.lineTo((x + 1) * CS, y * CS); g.stroke(); }
+      else { g.fillStyle = C.deck; g.fillRect(x * CS, y * CS, CS, CS); }
+    }
+    g.fillStyle = rgba(C.phos, 0.16);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!pared(x, y)) g.fillRect(x * CS - 0.5, y * CS - 0.5, 1.2, 1.2);
+    g.strokeStyle = C.phosDim; g.lineWidth = Math.max(1, CS * 0.06); g.lineCap = "square";
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (pared(x, y)) continue;
+      const X = x * CS, Y = y * CS; g.beginPath();
+      if (pared(x, y - 1)) { g.moveTo(X, Y); g.lineTo(X + CS, Y); }
+      if (pared(x, y + 1)) { g.moveTo(X, Y + CS); g.lineTo(X + CS, Y + CS); }
+      if (pared(x - 1, y)) { g.moveTo(X, Y); g.lineTo(X, Y + CS); }
+      if (pared(x + 1, y)) { g.moveTo(X + CS, Y); g.lineTo(X + CS, Y + CS); }
+      g.stroke();
+    }
+    g.setLineDash([2, 3]); g.strokeStyle = rgba(C.phos, 0.55); g.lineWidth = 1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (MAPA.filas[y][x] !== "+") continue; g.beginPath();
+      if (pared(x - 1, y) && pared(x + 1, y)) { g.moveTo(x * CS + 2, y * CS + CS / 2); g.lineTo(x * CS + CS - 2, y * CS + CS / 2); }
+      else { g.moveTo(x * CS + CS / 2, y * CS + 2); g.lineTo(x * CS + CS / 2, y * CS + CS - 2); }
+      g.stroke();
+    }
+    g.setLineDash([]);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (MAPA.filas[y][x] !== "L") continue;
+      const p = CS * 0.16, X = x * CS + p, Y = y * CS + p, s = CS - 2 * p;
+      g.fillStyle = C.void; g.fillRect(X, Y, s, s); g.strokeStyle = C.phos; g.lineWidth = 1.2; g.strokeRect(X, Y, s, s);
+      g.strokeStyle = rgba(C.phos, 0.5); g.beginPath();
+      for (let i = 1; i <= 3; i++) { const yy = Y + s * i / 4; g.moveTo(X + s * 0.2, yy); g.lineTo(X + s * 0.8, yy); }
+      g.stroke();
+    }
+    g.fillStyle = rgba(C.phos, 0.5); g.font = `600 ${Math.max(7.5, CS * 0.34)}px ${FM}`; g.textBaseline = "top";
+    for (const e of MAPA.etiquetas) g.fillText(e.nombre.toUpperCase(), e.x * CS + 3, e.y * CS + 3);
+  }
+
+  /* ---------- Mapa dinámico ---------- */
+  const suave = (t) => (t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t));
+  function interp(actual, anterior, f) {
+    if (!anterior) return [actual[0], actual[1]];
+    return [anterior[0] + (actual[0] - anterior[0]) * f, anterior[1] + (actual[1] - anterior[1]) * f];
+  }
+  function dibujar(ahora) {
+    if (!MAPA || !E) return;
+    const g = ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(fondo, 0, 0); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const dur = running ? SPEEDS[speed] : 260, f = suave((ahora - animStart) / dur);
+    const t = interp([E.tripulante.x, E.tripulante.y], prev && prev.t, f);
+    const a = interp([E.alien.x, E.alien.y], prev && prev.a, f);
+    const tx = (t[0] + 0.5) * CS, ty = (t[1] + 0.5) * CS, ax = (a[0] + 0.5) * CS, ay = (a[1] + 0.5) * CS;
+    if (layers.hint && E.pista_activa) {
+      const k = MAPA.nombres_salas.indexOf(E.pista_activa);
+      g.fillStyle = rgba(C.phos, 0.13);
+      for (let y = 0; y < MAPA.alto; y++) for (let x = 0; x < MAPA.ancho; x++) if (MAPA.salas[y][x] === k) g.fillRect(x * CS, y * CS, CS, CS);
+    }
+    if (layers.vision) { g.fillStyle = rgba(C.threat, 0.13); for (const [x, y] of E.vision) g.fillRect(x * CS, y * CS, CS, CS); }
+    if (layers.path && E.ruta.length > 1) {
+      g.setLineDash([3, 4]); g.strokeStyle = rgba(C.threat, 0.8); g.lineWidth = 1.6; g.beginPath(); g.moveTo(ax, ay);
+      for (let i = 1; i < E.ruta.length; i++) g.lineTo((E.ruta[i][0] + 0.5) * CS, (E.ruta[i][1] + 0.5) * CS);
+      g.stroke(); g.setLineDash([]);
+      const fin = E.ruta[E.ruta.length - 1], fx = (fin[0] + 0.5) * CS, fy = (fin[1] + 0.5) * CS, r = CS * 0.18;
+      g.beginPath(); g.moveTo(fx - r, fy - r); g.lineTo(fx + r, fy + r); g.moveTo(fx + r, fy - r); g.lineTo(fx - r, fy + r); g.stroke();
+    }
+    if (layers.trail) E.rastro.forEach((c, i) => {
+      g.fillStyle = rgba(C.crew, (i / E.rastro.length) * 0.4); g.beginPath();
+      g.arc((c[0] + 0.5) * CS, (c[1] + 0.5) * CS, CS * 0.07, 0, 7); g.fill();
+    });
+    g.strokeStyle = rgba(C.crew, 0.45); g.lineWidth = 1.2; g.beginPath(); g.arc(tx, ty, CS * 0.4, 0, 7); g.stroke();
+    g.fillStyle = C.crew; g.beginPath(); g.arc(tx, ty, CS * 0.24, 0, 7); g.fill();
+    if (E.ve) {
+      const r = CS * 0.62, l = CS * 0.22; g.strokeStyle = C.threat; g.lineWidth = 1.6; g.beginPath();
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const cx = tx + sx * r, cy = ty + sy * r; g.moveTo(cx, cy - sy * l); g.lineTo(cx, cy); g.lineTo(cx - sx * l, cy); }
+      g.stroke();
+    }
+    const ph = (ahora % 1100) / 1100;
+    for (const o of [0, 0.5]) { const q = (ph + o) % 1; g.strokeStyle = rgba(C.threat, (1 - q) * 0.55); g.lineWidth = 1.3; g.beginPath(); g.arc(ax, ay, CS * (0.32 + q * 1.15), 0, 7); g.stroke(); }
+    g.fillStyle = C.threat; g.beginPath(); g.arc(ax, ay, CS * 0.26, 0, 7); g.fill();
+    g.fillStyle = C.void; g.beginPath(); g.arc(ax, ay, CS * 0.08, 0, 7); g.fill();
+    g.strokeStyle = C.threat; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax + E.alien.dx * CS * 0.6, ay + E.alien.dy * CS * 0.6); g.stroke();
+    const fl = (ahora - flashAt) / 900;
+    if (fl >= 0 && fl < 1) { g.fillStyle = rgba(C.threat, (1 - fl) * 0.32); g.fillRect(0, 0, MAPA.ancho * CS, MAPA.alto * CS); }
+    if (E.terminado) {
+      g.fillStyle = rgba(C.void, 0.55); g.fillRect(0, MAPA.alto * CS / 2 - CS, MAPA.ancho * CS, CS * 2);
+      g.fillStyle = E.capturado ? C.threat : C.phos; g.font = `600 ${Math.max(14, CS * 0.9)}px ${FD}`;
+      g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillText(E.capturado ? "CAPTURA" : "FIN DEL TIEMPO", MAPA.ancho * CS / 2, MAPA.alto * CS / 2); g.textAlign = "left";
+    }
+  }
+
+  /* ---------- Instrumentos ---------- */
+  function texto(id, valor, clase) { const el = $(id); el.textContent = valor; el.className = "v" + (clase ? " " + clase : "") + (id === "dist" || id === "hints" ? " mono" : ""); }
+  function actualizarUI() {
+    if (!E) return;
+    $("tick").textContent = String(E.tick).padStart(4, "0");
+    $("seedTag").textContent = `Vela-9 · semilla ${E.semilla}`;
+    $("modelPill").textContent = `Modelo: ${E.modelo}`;
+    $("modeTag").textContent = `Alienígena · ${E.alien.estado}`;
+    texto("crewRoom", E.tripulante.sala || "--");
+    texto("alienRoom", E.alien.sala || "--");
+    texto("sees", E.ve ? "Sí" : "No", E.ve ? "hot" : "");
+    texto("dist", E.distancia === null ? "--" : `${E.distancia} pasos`);
+    texto("hints", `${E.pistas_restantes} de ${E.pistas_max}`, E.pistas_restantes ? "" : "hot");
+    texto("activeHint", E.pista_activa || "ninguna", E.pista_activa ? "amber" : "");
+    const fin = $("endTag");
+    fin.textContent = E.capturado ? "captura" : E.terminado ? "fin del tiempo" : "en juego";
+    fin.style.color = E.capturado ? T("--threat") : "";
+    const nodo = E.ve ? 0 : (E.alien.estado === "persigue" && E.alien.busca_ultima_vista) ? 1 : E.alien.estado === "va a la pista" ? 2 : 3;
+    document.querySelectorAll("#bt li").forEach((li, i) => { li.classList.toggle("active", i === nodo); li.classList.toggle("hot", i === nodo && nodo === 0); });
+    const log = $("log"); log.replaceChildren();
+    for (const r of E.registro.slice().reverse()) {
+      const li = document.createElement("li"), t = document.createElement("time"), s = document.createElement("span");
+      t.textContent = "T+" + String(r.tick).padStart(4, "0"); s.textContent = r.tipo === "agente" ? "directora: " + r.texto : r.texto;
+      li.className = r.tipo === "agente" ? "agente" : /captur|vio al/.test(r.texto) ? "hot" : /tripulante entr/.test(r.texto) ? "crew" : "";
+      li.append(t, s); log.append(li);
+    }
+    $("step").disabled = busy || E.terminado || pilot === "you";
+    $("play").disabled = busy || E.terminado || pilot === "you";
+    document.querySelectorAll("[data-mv]").forEach((b) => (b.disabled = busy || E.terminado));
+    pintarChat();
+  }
+
+  /* ---------- Chat ---------- */
+  function burbuja(clase, pregunta, respuesta) {
+    const div = document.createElement("div"); div.className = "msg" + (clase ? " " + clase : "");
+    if (pregunta) { const q = document.createElement("div"); q.className = "q"; q.textContent = "> " + pregunta; div.append(q); }
+    const a = document.createElement("div"); a.className = "a"; conNegritas(a, respuesta); div.append(a);
+    return div;
+  }
+  // El modelo marca énfasis con **texto**: se convierte en negrita con nodos, nunca con
+  // innerHTML, para que nada de la respuesta se interprete como HTML.
+  function conNegritas(el, texto) {
+    String(texto).split("**").forEach((parte, i) => {
+      if (i % 2) { const b = document.createElement("strong"); b.textContent = parte; el.append(b); }
+      else el.append(document.createTextNode(parte));
+    });
+  }
+  function pintarChat() {
+    const cont = $("msgs"); cont.replaceChildren();
+    const chat = E ? E.chat : [];
+    if (!chat.length && !pendingQuestion && !transientError) { const p = document.createElement("p"); p.className = "empty"; p.textContent = "Todavía no hay preguntas en esta partida."; cont.append(p); }
+    for (const m of chat) {
+      const div = burbuja("", m.pregunta, m.respuesta);
+      if (m.llamadas.length) {
+        const ul = document.createElement("ul"); ul.className = "calls";
+        m.llamadas.forEach((c, i) => { const li = document.createElement("li"); if (c.error) li.className = "err";
+          li.textContent = `${i + 1}. ${c.herramienta}(${JSON.stringify(c.argumentos)}) -> ${c.resultado}`; ul.append(li); });
+        div.append(ul);
+      }
+      const meta = document.createElement("div"); meta.className = "meta";
+      meta.textContent = `Tick ${m.tick} · ${m.numero_llamadas} llamadas a herramientas`; div.append(meta);
+      if (m.limite_alcanzado) { const l = document.createElement("div"); l.className = "limit"; l.textContent = "Se alcanzó el límite de llamadas a herramientas"; div.append(l); }
+      cont.append(div);
+    }
+    if (transientError) cont.append(burbuja("error", transientError.pregunta, transientError.texto));
+    if (pendingQuestion) cont.append(burbuja("pending", pendingQuestion, "Consultando a la directora..."));
+    cont.scrollTop = cont.scrollHeight;
+  }
+  async function preguntar(texto) {
+    texto = (texto || "").trim();
+    if (!texto || busy) return;
+    busy = true; setRunning(false); pendingQuestion = texto; transientError = null;
+    $("question").disabled = true; $("send").disabled = true;
+    document.querySelectorAll("#examples .chip").forEach((b) => (b.disabled = true));
+    actualizarUI();
+    try {
+      const { datos } = await api("/api/preguntar", { pregunta: texto });
+      if (datos.error) transientError = { pregunta: texto, texto: datos.error };
+      else $("question").value = "";
+      pendingQuestion = null; aplicar(datos.estado);
+    } catch (e) {
+      pendingQuestion = null; transientError = { pregunta: texto, texto: "No hay conexión con el servidor del panel." };
+    } finally {
+      busy = false; $("question").disabled = false; $("send").disabled = false;
+      document.querySelectorAll("#examples .chip").forEach((b) => (b.disabled = false));
+      actualizarUI();
+    }
+  }
+  function mostrarAviso(texto) { transientError = { pregunta: "", texto }; pintarChat(); }
+
+  /* ---------- Controles ---------- */
+  function setRunning(v) {
+    running = v && !(E && E.terminado) && pilot === "bot";
+    $("play").textContent = running ? "Pausar" : "Iniciar";
+    $("livePill").classList.toggle("running", running); $("liveTxt").textContent = running ? "En vivo" : "En pausa";
+    if (running) lastTick = performance.now();
+  }
+  $("play").addEventListener("click", () => setRunning(!running));
+  $("step").addEventListener("click", () => { setRunning(false); accion("/api/paso", {}); });
+  $("reset").addEventListener("click", () => {
+    setRunning(false); transientError = null; prev = null;
+    const semilla = parseInt($("seed").value, 10);
+    // Sin animación desde la partida anterior: la nueva aparece en su lugar.
+    accion("/api/reiniciar", { semilla: Number.isFinite(semilla) ? semilla : 42 }).then(() => { prev = null; });
+  });
+  $("speed").addEventListener("input", (e) => { speed = +e.target.value; $("speedOut").textContent = speed + "x"; });
+  document.querySelectorAll("[data-layer]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.layer; layers[k] = !layers[k]; b.setAttribute("aria-pressed", layers[k]);
+  }));
+  function setPilot(p) {
+    pilot = p; setRunning(false);
+    $("modeBot").setAttribute("aria-pressed", p === "bot"); $("modeYou").setAttribute("aria-pressed", p === "you");
+    $("youPanel").hidden = p !== "you"; actualizarUI();
+  }
+  $("modeBot").addEventListener("click", () => setPilot("bot"));
+  $("modeYou").addEventListener("click", () => setPilot("you"));
+  const mover = (dir) => { if (pilot === "you" && !busy && E && !E.terminado) accion("/api/mover", { direccion: dir }); };
+  document.querySelectorAll("[data-mv]").forEach((b) => b.addEventListener("click", () => mover(b.dataset.mv)));
+  const TECLAS = { ArrowUp: "arriba", ArrowDown: "abajo", ArrowLeft: "izquierda", ArrowRight: "derecha",
+                   w: "arriba", s: "abajo", a: "izquierda", d: "derecha", " ": "quieto" };
+  window.addEventListener("keydown", (e) => {
+    if (pilot !== "you") return;
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    const dir = TECLAS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+    if (dir) { e.preventDefault(); mover(dir); }
+  });
+  $("send").addEventListener("click", () => preguntar($("question").value));
+  $("question").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); preguntar($("question").value); } });
+  document.querySelectorAll("#examples .chip").forEach((b) => b.addEventListener("click", () => { $("question").value = b.textContent; preguntar(b.textContent); }));
+
+  /* ---------- Bucle ---------- */
+  function cuadro(ahora) {
+    if (running && !inFlight && !busy && ahora - lastTick >= SPEEDS[speed]) { lastTick = ahora; accion("/api/paso", {}); }
+    dibujar(ahora);
+    requestAnimationFrame(cuadro);
+  }
+  (async function iniciar() {
+    try {
+      MAPA = (await api("/api/mapa")).datos;
+      dimensionar();
+      aplicar((await api("/api/estado")).datos);
+      $("seed").value = E.semilla;
+    } catch (e) { mostrarAviso("No hay conexión con el servidor del panel."); }
+    if (window.ResizeObserver) new ResizeObserver(dimensionar).observe(mapC.parentElement);
+    else window.addEventListener("resize", dimensionar);
+    requestAnimationFrame(cuadro);
+  })();
+})();
+</script>
+</body>
+</html>
