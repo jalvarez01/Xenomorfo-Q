@@ -12,7 +12,7 @@ Cambiar un contrato requiere actualizar este archivo en el mismo Pull Request.
 **Existe (v0)**, en `sim/env.py`. Responsable: Juan José Álvarez.
 
 ```python
-EstacionEnv(mapa, max_ticks=300, distancia_inicial=10, semilla=None)
+EstacionEnv(mapa, max_ticks=300, distancia_inicial=10, semilla=None, alcance_vision=7.5)
 obs = env.reset(semilla)                              # np.ndarray (4, alto, ancho) float32
 obs, recompensa, terminado, info = env.step(accion)
 ```
@@ -22,6 +22,10 @@ obs, recompensa, terminado, info = env.step(accion)
 - `info` hoy: `{"tick", "capturado", "distancia_real", "ve_tripulante"}`. `ve_tripulante` es `True` si el tripulante está en el campo de visión del alienígena al final del tick.
 - Atributos de visión (T08): `direccion_alien`, la dirección `(dx, dy)` hacia la que mira el alienígena (`(0, 1)` al empezar; cambia con las acciones 0 a 3 aunque choque y no cambia con la 4), y `campo_vision`, matriz booleana `(alto, ancho)` con las casillas que ve, recalculada en `reset()` y en cada tick.
 - Funciones públicas para T11 y T18: en `sim/percepcion.py`, `linea_de_vista(mapa, origen, destino)`, `ve_casilla(mapa, pos, direccion, casilla)` y `campo_de_vision(mapa, pos, direccion)`; en `sim/rutas.py`, `ruta(mapa, origen, destino)` y `ruta_a_sala(mapa, origen, sala)`, que devuelven la lista de casillas (pasos = `len(camino) - 1`) o `None` si no hay camino. Reglas en [entorno.md](entorno.md#visión) y [entorno.md](entorno.md#rutas-con-a).
+- Parámetros opcionales de dificultad (D19), que solo cambia el panel; con los valores por defecto todo es igual que antes y las partidas con semilla no cambian:
+  - `alcance_vision` (por defecto `ALCANCE_VISION`, 7.5 casillas): alcance con el que se calcula `campo_vision`. Las herramientas leen `campo_vision`, así que `ve_tripulante` usa siempre el alcance de la partida.
+  - `env.paso_extra_alien(accion) -> {"tick", "capturado", "distancia_real", "ve_tripulante"}`: un paso más del alienígena dentro del tick actual, con las mismas reglas de movimiento (gira, no atraviesa paredes) y revisando la captura antes y después. No avanza el tick, no mueve al tripulante y no usa el generador aleatorio. Lo llama `Avance` cuando la política lo pide (sección 8).
+  - `Partida(semilla, max_ticks, mapa, alcance_vision=7.5, paso_extra_cada=None)` los pasa al entorno y al alienígena, y `Directora(..., opciones_partida=None)` los pasa a cada partida que crea.
 - El estado del alienígena por reglas y la pista vigente no van en `info`: son atributos de `AlienReglas` (`estado` y `pista_activa`), ver la sección 8.
 
 ## 2. Acciones
@@ -236,9 +240,10 @@ PROMPT_VERSION = "2"
 **Existe**, en `alien/reglas.py` (T18, T19). Responsable: Santiago Meneses. Detalle en [alien.md](alien.md).
 
 ```python
-alien = AlienReglas(env)            # uno por partida, después de env.reset()
+alien = AlienReglas(env, paso_extra_cada=None)  # uno por partida, después de env.reset()
 accion = alien.decidir()            # o alien(env): sirve como política de Avance
-alien.dar_pista(sala: str) -> {"sala", "pistas_restantes"}
+alien.dar_pista(sala: str, contar=True) -> {"sala", "pistas_restantes"}
+alien.accion_extra() -> int | None  # paso extra de persecución de este tick (D19)
 alien.tomar_eventos() -> list[str]  # eventos desde la última llamada; Avance los usa
 alien.estado                        # "persigue", "va a la pista" o "patrulla"
 alien.pista_activa                  # nombre de la sala de la pista vigente, o None
@@ -249,3 +254,7 @@ alien.pistas_restantes              # de 3 a 0
 - Solo usa la posición del tripulante cuando está en `env.campo_vision`.
 - `dar_pista` lanza `ValueError` si no quedan pistas o la sala no existe (con la lista de salas válidas), sin gastar la pista. El nombre se compara sin mayúsculas ni espacios en los extremos.
 - Requiere un mapa con salas; si no tiene, `AlienReglas(env)` lanza `ValueError`.
+- Opcional (D19, solo el panel):
+  - **`paso_extra_cada=N`:** en los ticks múltiplos de N en los que decidió perseguir, `accion_extra()` devuelve un paso más hacia el tripulante (si lo ve) o hacia la última casilla donde lo vio. `Avance` lo aplica con `env.paso_extra_alien`. Con `None`, el valor por defecto, siempre devuelve `None`. Nunca usa el generador aleatorio.
+  - **`dar_pista(sala, contar=False)`:** fija la pista sin gastar ni exigir las pistas de la directora; la usa la pista automática del panel, que lleva su propio presupuesto.
+- `Avance(env, politica, tras_tick=None)`: `tras_tick(env, info) -> list[str]` se llama al final de cada tick sin captura y sus eventos se agregan con el prefijo del tick. Por defecto no hay ninguna; el panel la usa para la pista automática del nivel pesadilla.

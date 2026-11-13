@@ -146,3 +146,25 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
   - un servicio administrado (App Runner, Elastic Beanstalk): más piezas y costo para una demostración;
   - exponer el panel directamente en el puerto 8000: sin HTTPS ni contraseña;
   - guardar las sesiones en disco o en una base de datos: no hace falta para una demostración y obliga a pensar en datos de visitantes.
+
+## D19. Niveles de dificultad solo en el panel, con normal por defecto
+
+- **Fecha:** 2026-11-13
+- **Decisión:** el panel tiene un selector de dificultad con tres niveles. Cambiarlo reinicia la partida con la misma semilla.
+  - **normal:** todo por defecto; es la partida de siempre.
+  - **difícil:** la visión del alienígena llega a 10 casillas en vez de 7.5, y cada 3 ticks en los que persigue da un paso extra.
+  - **pesadilla:** difícil, más una pista automática hacia la sala real del tripulante cuando el alienígena lleva 25 ticks sin verlo, como máximo 3 por partida.
+- **Cómo se implementa:** con parámetros opcionales cuyos valores por defecto son los de siempre.
+  - `EstacionEnv(alcance_vision)`.
+  - `AlienReglas(paso_extra_cada)`, con `accion_extra()`, que `Avance` aplica con `env.paso_extra_alien()`. Ese método usa las mismas reglas de movimiento y de captura y no usa el generador aleatorio.
+  - `Avance(tras_tick)`.
+  - `AlienReglas.dar_pista(sala, contar=False)`.
+  - La pista automática es una regla del panel (`PistaAutomatica` en `panel/sesion.py`), no de la directora. Lleva su propio presupuesto, aparte de las 3 pistas de la directora, y deja en el registro "directora automática: pista hacia <sala>".
+  - La directora del chat trabaja sobre la misma partida del nivel elegido, y `ve_tripulante` lee el campo de visión real, con el alcance del nivel.
+- **Por qué solo en el panel:** los niveles son para jugar en la demostración. Los casos de prueba, `python -m director`, `python -m experiments.casos`, el notebook y la evidencia oficial deben seguir midiendo el mismo problema que se documentó. Si la dificultad entrara ahí, cambiarían los valores esperados y la corrida oficial dejaría de ser comparable.
+- **Por qué normal es el valor por defecto:** así nada cambia para quien no toca el selector. Una prueba lo verifica:
+  - las huellas de las partidas con semillas 42, 0 y 7 y la de 200 pasos de `env.step` son las mismas que se tomaron antes de agregar los niveles;
+  - los valores esperados de los 6 casos son los de la evidencia oficial.
+- **Alternativas descartadas:**
+  - un alienígena más rápido en todo momento: haría injugable el modo Tú y no se parece a una persecución;
+  - dar las pistas automáticas con el presupuesto de la directora: le quitaría pistas al agente sin que él lo decida.

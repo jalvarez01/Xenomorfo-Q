@@ -128,6 +128,12 @@ python -m panel --semilla 7 --puerto 8080 --abrir
 
 - **Observar:** Iniciar, Pausar, Paso, Reiniciar con semilla y velocidad. Cada tick avanza con el mismo avance que usa la herramienta `avanzar_simulacion`, con el alienígena por reglas.
 - **Tú:** mueves al tripulante con las flechas, WASD o los botones; cada movimiento es un tick. Los casilleros no esconden porque la simulación no lo implementa.
+- **Dificultad:** Normal, Difícil o Pesadilla, junto a la semilla; cambiarla reinicia la partida con la misma semilla y el nivel se ve en la etiqueta del mapa y en `/api/estado` (decisión D19).
+  - **Normal** es la partida de siempre y el valor por defecto.
+  - **Difícil:** el alienígena ve hasta 10 casillas y, mientras persigue, da un paso extra cada 3 ticks.
+  - **Pesadilla:** Difícil más una pista automática hacia la sala real del tripulante tras 25 ticks sin verlo (como máximo 3, aparte de las 3 de la directora).
+  - La directora del chat responde sobre la misma partida, con la visión del nivel.
+  - Los niveles existen solo en el panel: los casos, `python -m director`, el notebook y la evidencia oficial usan siempre la partida normal.
 - **Mapa:** paredes, puertas, casilleros y salas del mapa real; tripulante y alienígena en sus posiciones, la dirección del alienígena, su campo de visión real, la ruta A* hacia su objetivo, el rastro del tripulante y la sala de la pista vigente.
 - **Instrumentos:** tick, sala de cada personaje, si lo ve, distancia A* en pasos, pistas restantes, pista activa, rama activa del alienígena por reglas, captura y un registro con los eventos del avance y las llamadas de la directora.
 - **Chat:** la pregunta va a `Directora.preguntar` sobre la partida del mapa; se ven la respuesta y cada llamada con sus argumentos y resultado, y el mapa se actualiza si la directora da una pista o avanza la simulación. Trae las preguntas de los casos C1 a C4 como ejemplos.
