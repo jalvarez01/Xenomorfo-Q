@@ -25,6 +25,7 @@ import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from panel.sesion import Sesion
 
@@ -47,11 +48,13 @@ class _Manejador(BaseHTTPRequestHandler):
     # ------------------------------------------------------------------ GET
     def do_GET(self) -> None:  # noqa: N802 - nombre fijo de http.server
         """Página, mapa o estado."""
-        if self.path in ("/", "/index.html"):
+        # Se enruta solo por la ruta: la página acepta parámetros como ?modo=tu.
+        ruta = urlsplit(self.path).path
+        if ruta in ("/", "/index.html"):
             self._enviar(HTTPStatus.OK, PAGINA.read_bytes(), "text/html; charset=utf-8")
-        elif self.path == "/api/mapa":
+        elif ruta == "/api/mapa":
             self._json(HTTPStatus.OK, self.sesion.mapa())
-        elif self.path == "/api/estado":
+        elif ruta == "/api/estado":
             self._json(HTTPStatus.OK, self.sesion.estado())
         else:
             self._json(HTTPStatus.NOT_FOUND, {"error": "Ruta desconocida."})
