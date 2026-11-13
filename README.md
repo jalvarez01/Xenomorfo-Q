@@ -92,7 +92,7 @@ sequenceDiagram
     N-->>A: Respuesta final
     A-->>CLI: Respuesta + traza
     CLI-->>U: Respuesta
-    Note over A,N: Máximo 6 llamadas; al límite, respuesta final sin herramientas
+    Note over A,N: Máximo 6 llamadas. Al límite, respuesta final sin herramientas
 ```
 
 ## 6. Resultados
