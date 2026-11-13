@@ -216,12 +216,15 @@ La plantilla de variables está en `.env.example`.
 
 ```python
 construir_prompt_sistema(nombres_salas: list[str], limite: int = 6, pistas_max: int = 3) -> str
-PROMPT_VERSION = "1"
+PROMPT_VERSION = "2"
 ```
 
 - El texto se genera con las salas del mapa, el límite y las pistas; no lleva esos valores escritos a mano. `limite` debe ser el mismo que se pasa a `ejecutar_agente`.
 - `PROMPT_VERSION` se sube cada vez que cambia la plantilla, y cada caso de prueba (T21) registra la versión usada.
-- Regla de salas inexistentes: el modelo pasa el nombre tal como lo dijo el usuario. Si la herramienta responde que la sala no existe, la directora lo dice, lista las salas válidas y puede preguntar por un nombre parecido, pero no calcula ni inventa una ruta para la sala sugerida hasta que el usuario lo confirme.
+- Regla de salas inexistentes: el modelo pasa el nombre tal como lo dijo el usuario, sin cambiarlo por otra sala ni por un sinónimo. Si la herramienta responde que la sala no existe, la directora lo dice, lista las salas válidas y puede preguntar por un nombre parecido, pero no calcula ni inventa una ruta para la sala sugerida hasta que el usuario lo confirme.
+- Comparaciones: si la pregunta compara antes y después (por ejemplo, si el alienígena se acercó), mide la distancia con `ve_tripulante` antes y después de la acción y responde con los dos números.
+- `predecir_destino` solo se usa para saber hacia dónde va el tripulante; dónde está lo dice `estado_partida`.
+- Versión 2 (2026-11-12): las tres reglas anteriores se agregaron tras la prueba real (D15): con "enfermeria" sin tilde el modelo calculaba la ruta desde Médico, y en C4 no comparaba la distancia antes y después.
 
 ## 7. Dataset
 
