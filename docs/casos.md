@@ -7,6 +7,7 @@ Apoyo a T21: corre los 6 casos de prueba de la directora y guarda la evidencia. 
 ```bash
 python -m experiments.casos                 # semilla 42, resultados en experiments/resultados
 python -m experiments.casos --semilla 7 --salida otra/carpeta
+python -m experiments.casos --recomparar experiments/resultados/<archivo>.json   # sin el modelo
 ```
 
 Necesita la clave del proveedor elegido con `XQ_PROVEEDOR` (ver `.env.example`). Sin la clave termina con código 2 y no escribe archivos.
@@ -56,11 +57,41 @@ La preparación de C3 sale de `buscar_preparacion()`: recorre las semillas de 0 
 
 El valor esperado de C3 incluye `sala_actual_tripulante` para la valoración: una respuesta correcta da el destino (Hangar), no la sala donde ya está.
 
+## Comparación automática y valoración sugerida
+
+`comparar` busca en la respuesta cada dato esperado del caso (números y nombres, sin importar mayúsculas ni tildes) y `sugerir_valoracion` resume: **correcto** si coinciden todos, **parcial** si coinciden algunos e **incorrecto** si no coincide ninguno, con el motivo y las herramientas usadas. Los datos de cada caso:
+
+| Caso | Datos comparados |
+|---|---|
+| C1 | sala del tripulante, pasos del alienígena al tripulante |
+| C2 | si lo ve (busca la negación "no") |
+| C3 | sala destino, confianza (acepta 0.5, 0,5 o 50 %) |
+| C4 | sala de la pista, pistas restantes, pasos antes, pasos después, si se acercó |
+| C5 | dice que la sala no existe, lista las 8 salas válidas, no calcula ninguna ruta |
+| C6 | alcanza el límite, dice que lo alcanzó, y los pasos de cada sala que la respuesta informa (un número seguido de "paso" justo después del nombre) |
+
+Es una comparación textual simple para revisar rápido; la valoración final (`valoracion` y `correcto`) la hace una persona. `--recomparar` vuelve a calcularla sobre un JSON guardado sin llamar al modelo, por ejemplo después de corregir una regla.
+
+## Resultados de la corrida oficial
+
+[experiments/resultados/casos_2026-11-12_prompt2_semilla42.md](../experiments/resultados/casos_2026-11-12_prompt2_semilla42.md) (y su `.json`): `gpt-5.4-nano`, temperatura 0, prompt versión 2, semilla 42 (C3 preparado con semilla 0 y 11 ticks).
+
+| Caso | Llamadas | Límite | Latencia (s) | Comparación | Valoración sugerida |
+|---|---|---|---|---|---|
+| C1 | 3 | no | 2.9 | 2 de 2 | correcto |
+| C2 | 1 | no | 1.5 | 1 de 1 | correcto |
+| C3 | 1 | no | 2.1 | 2 de 2 | correcto |
+| C4 | 4 | no | 4.9 | 3 de 5 | parcial: no dio la distancia inicial ni dijo si se acercó |
+| C5 | 1 | no | 1.9 | 3 de 3 | correcto |
+| C6 | 6 | sí | 4.4 | 7 de 7 | correcto |
+
+**Estabilidad de C4.** En la corrida oficial C4 salió parcial: el modelo no midió la distancia antes de la pista y afirmó, sin razón, que `ve_tripulante` solo da la distancia cuando ve al tripulante (la herramienta la da siempre). Con el mismo prompt y temperatura 0, en otras 8 corridas (3 con `python -m director` y 5 con el ejecutor) midió 15 y 6 casillas y respondió que sí se acercó. La temperatura 0 reduce la variación pero no la elimina; la evidencia oficial se deja como salió.
+
 ## Archivos que produce
 
 En la carpeta de salida, dos archivos con el mismo nombre base `casos_<fecha>_prompt<PROMPT_VERSION>_semilla<semilla>`:
 
-- `.json`: `fecha`, `prompt_version`, `modelo`, `temperatura`, `semilla`, `limite` y `casos`. Cada caso trae `id`, `categoria`, `pregunta`, `herramientas_esperadas`, `preparacion` (si la tiene), `semilla_caso`, `resultado_esperado`, `respuesta`, `llamadas` (herramienta, argumentos, resultado, segundos y si fue error), `numero_llamadas`, `limite_alcanzado`, `latencia_segundos`, y `valoracion` y `correcto` vacíos.
+- `.json`: `fecha`, `prompt_version`, `modelo`, `temperatura`, `semilla`, `limite` y `casos`. Cada caso trae `id`, `categoria`, `pregunta`, `herramientas_esperadas`, `preparacion` (si la tiene), `semilla_caso`, `resultado_esperado`, `comparacion`, `valoracion_sugerida`, `respuesta`, `llamadas` (herramienta, argumentos, resultado, segundos y si fue error), `numero_llamadas`, `limite_alcanzado`, `latencia_segundos`, y `valoracion` y `correcto` vacíos.
 - `.md`: el mismo contenido, legible, con una tabla resumen y una sección por caso con "Valoración" y "Correcto" pendientes.
 
 Los archivos nunca incluyen la clave ni ninguna variable de entorno; `tests/test_casos.py` lo comprueba con una clave falsa.
