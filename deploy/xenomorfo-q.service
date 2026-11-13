@@ -1,0 +1,36 @@
+# Servicio systemd del panel de Xenomorfo-Q (D18).
+# deploy/instalar.sh lo copia a /etc/systemd/system/xenomorfo-q.service.
+# El panel escucha solo en 127.0.0.1:8000; Caddy es el único que escucha en la red.
+
+[Unit]
+Description=Panel de Xenomorfo-Q
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=xq
+Group=xq
+WorkingDirectory=/opt/xenomorfo-q
+# Clave del modelo y cupos del chat; archivo de root con permisos 600, nunca en el repositorio.
+EnvironmentFile=/etc/xenomorfo-q.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/xenomorfo-q/.venv/bin/python -m panel --puerto 8000
+Restart=always
+RestartSec=3
+
+# Endurecimiento: el panel no escribe en disco ni necesita privilegios.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

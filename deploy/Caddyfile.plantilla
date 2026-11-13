@@ -1,0 +1,32 @@
+# Plantilla del Caddyfile del panel de Xenomorfo-Q (D18).
+#
+# deploy/instalar.sh la copia a /etc/caddy/Caddyfile reemplazando {$XQ_DOMINIO},
+# {$XQ_USUARIO} y {$XQ_HASH} por sus valores (el hash es el de `caddy hash-password`,
+# nunca la contraseña). También sirve tal cual si esas tres variables están en el entorno
+# de Caddy.
+#
+# Caddy obtiene y renueva solo el certificado HTTPS del dominio y redirige HTTP a HTTPS.
+
+{$XQ_DOMINIO} {
+	# Todo pide usuario y contraseña, salvo /salud, que usan las comprobaciones.
+	@protegido not path /salud
+	basic_auth @protegido {
+		{$XQ_USUARIO} {$XQ_HASH}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# La página trae su CSS y su JS en línea y no carga nada de otros sitios.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+		-Server
+	}
+
+	encode gzip
+
+	# El panel escucha solo en la máquina; Caddy le pasa X-Forwarded-Proto.
+	reverse_proxy 127.0.0.1:8000
+}
