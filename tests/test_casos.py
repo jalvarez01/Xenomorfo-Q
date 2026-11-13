@@ -11,6 +11,7 @@ import pytest
 from director import llm
 from director.llm import ConfigLLM
 from director.partida import Partida
+from director.prompt import PROMPT_VERSION
 from experiments import casos
 from experiments.casos import CASOS, calcular_esperado, ejecutar_casos
 from tests.test_directora import ClienteFalso, pide, texto
@@ -24,6 +25,8 @@ CLAVE_FALSA = "clave-secreta-de-prueba-0123456789"
 def entorno(monkeypatch):
     """Define una clave falsa en el entorno y desactiva la carga de .env."""
     monkeypatch.setattr(llm, "_cargar_dotenv", lambda: None)
+    for nombre in (llm.VAR_PROVEEDOR, *llm.VARIABLES_CLAVE, llm.VAR_MODELO, llm.VAR_URL_BASE):
+        monkeypatch.delenv(nombre, raising=False)
     monkeypatch.setenv(llm.VAR_CLAVE, CLAVE_FALSA)
 
 
@@ -91,7 +94,7 @@ def test_escribe_json_y_markdown_con_todos_los_campos(tmp_path):
     ruta_json, ruta_md = ejecutar_casos(salida=tmp_path, cliente=ClienteFalso(guion()),
                                         config=ConfigLLM())
     assert ruta_json.exists() and ruta_md.exists()
-    assert "prompt1" in ruta_json.name and "semilla42" in ruta_json.name
+    assert f"prompt{PROMPT_VERSION}" in ruta_json.name and "semilla42" in ruta_json.name
     informe = json.loads(ruta_json.read_text(encoding="utf-8"))
     assert set(informe) == {"fecha", "prompt_version", "modelo", "temperatura", "semilla",
                             "limite", "casos"}
@@ -121,14 +124,15 @@ def test_la_clave_nunca_aparece(tmp_path):
     for ruta in ejecutar_casos(salida=tmp_path, cliente=ClienteFalso(guion()), config=ConfigLLM()):
         contenido = ruta.read_text(encoding="utf-8")
         assert CLAVE_FALSA not in contenido
-        assert llm.VAR_CLAVE not in contenido
+        for variable in llm.VARIABLES_CLAVE:
+            assert variable not in contenido
 
 
 def test_comando_sin_clave(monkeypatch, tmp_path, capsys):
-    """Sin NVIDIA_API_KEY el comando sale con código 2, sin escribir archivos."""
+    """Sin la clave del proveedor el comando sale con código 2, sin escribir archivos."""
     monkeypatch.delenv(llm.VAR_CLAVE)
     assert casos.main(["--salida", str(tmp_path)]) == casos.CODIGO_SIN_CLAVE
-    assert "NVIDIA_API_KEY" in capsys.readouterr().err
+    assert llm.VAR_CLAVE in capsys.readouterr().err
     assert list(tmp_path.iterdir()) == []
 
 

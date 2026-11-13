@@ -84,13 +84,13 @@ De Médico al Hangar entre Laboratorio y Corredor B no aparece "puerta": la fila
 - `preguntar(pregunta)` llama a `ejecutar_agente` con el modelo y la temperatura de `config` y devuelve un `ResultadoAgente` ([contratos.md](contratos.md#6-agente)).
 - Cada pregunta es independiente: el modelo no recibe el historial de las anteriores. La partida sí persiste entre preguntas.
 - `reiniciar(semilla=None)` empieza una partida nueva (con la misma semilla si no se da otra).
-- El cliente real de NVIDIA NIM se crea en la primera pregunta. Crear la directora, importar el paquete y correr las pruebas no necesita la clave.
+- El cliente real del proveedor elegido con `XQ_PROVEEDOR` (OpenAI por defecto, o NVIDIA NIM) se crea en la primera pregunta. Crear la directora, importar el paquete y correr las pruebas no necesita la clave.
 
 ```python
 from director import Directora
 
 directora = Directora(semilla=42)
-resultado = directora.preguntar("¿En qué sala está el tripulante?")  # necesita NVIDIA_API_KEY
+resultado = directora.preguntar("¿En qué sala está el tripulante?")  # necesita la clave del proveedor
 print(resultado.respuesta)
 ```
 
@@ -104,4 +104,4 @@ python -m director
 
 - Con una pregunta, imprime la respuesta. Con `--registro`, también cada llamada a herramienta con sus argumentos, resultado y tiempo, el número de llamadas y si se alcanzó el límite.
 - Sin pregunta abre el modo interactivo (`> `): cada línea es una pregunta sobre la misma partida; `estado` muestra `estado_partida()` sin usar el modelo (útil para depurar) y `salir` termina.
-- Si falta `NVIDIA_API_KEY`, explica cómo configurarla con `.env.example` y termina con código 2, sin traza.
+- Si falta la clave del proveedor (`OPENAI_API_KEY` o `NVIDIA_API_KEY`), explica cómo configurarla con `.env.example` y termina con código 2, sin traza.
