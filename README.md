@@ -61,6 +61,27 @@ python -m experiments.casos --semilla 42
 
 Abrir [notebooks/demo_directora.ipynb](notebooks/demo_directora.ipynb) en Colab y guardar la clave en los secretos del notebook (icono de llave) con el nombre de su variable: `OPENAI_API_KEY` (por defecto), o `NVIDIA_API_KEY` junto con el secreto `XQ_PROVEEDOR` con el valor `nvidia`. La primera celda clona el repositorio, instala las dependencias y carga la clave sin mostrarla. El notebook muestra las herramientas sin el modelo, cuatro preguntas con su registro de llamadas y qué pasa al llegar al límite; está guardado con las salidas de una ejecución real. En local funciona igual, con la clave en `.env`.
 
+## Panel visual
+
+Un panel web local para ver y jugar una partida de Vela-9 y hablar con la directora sobre esa misma partida. Es una ayuda visual para la demostración: la rúbrica no exige interfaz gráfica, y el agente, las herramientas y la evidencia oficial no cambian (decisión D16).
+
+```bash
+python -m panel                          # http://127.0.0.1:8000/
+python -m panel --semilla 7 --puerto 8080 --abrir
+```
+
+- **Observar:** Iniciar, Pausar, Paso, Reiniciar con semilla y velocidad. Cada tick avanza con el mismo avance que usa la herramienta `avanzar_simulacion`, con el alienígena por reglas.
+- **Tú:** mueves al tripulante con las flechas, WASD o los botones; cada movimiento es un tick. Los casilleros no esconden porque la simulación no lo implementa.
+- **Mapa:** paredes, puertas, casilleros y salas del mapa real; tripulante y alienígena en sus posiciones, la dirección del alienígena, su campo de visión real, la ruta A* hacia su objetivo, el rastro del tripulante y la sala de la pista vigente.
+- **Instrumentos:** tick, sala de cada personaje, si lo ve, distancia A* en pasos, pistas restantes, pista activa, rama activa del alienígena por reglas, captura y un registro con los eventos del avance y las llamadas de la directora.
+- **Chat:** la pregunta va a `Directora.preguntar` sobre la partida del mapa; se ven la respuesta y cada llamada con sus argumentos y resultado, y el mapa se actualiza si la directora da una pista o avanza la simulación. Trae las preguntas de los casos C1 a C4 como ejemplos.
+
+Escucha solo en `127.0.0.1`, no usa nada de internet salvo la llamada al modelo desde el servidor, y la clave nunca llega al navegador. Sin clave, el mapa y el juego funcionan y el chat muestra el mismo mensaje de configuración que `python -m director`.
+
+![Panel en modo Tú después de unos movimientos, semilla 42, a 1440x900](docs/img/panel.png)
+
+A 1440x900 y a 1366x768 la caja de pregunta y la respuesta más reciente quedan al lado del mapa sin desplazar la página; el historial se desplaza dentro del panel del chat. Después de preguntar C4 en el chat, el mapa muestra la pista hacia Bodega y el avance de 10 ticks: [captura del chat](docs/img/panel_chat.png). La respuesta de esa captura salió parcial (no comparó la distancia antes y después), la misma variación de C4 que se describe en el análisis.
+
 ## Configuración de la clave
 
 El proveedor del modelo se elige con `XQ_PROVEEDOR` (decisión D15 en [docs/decisiones.md](docs/decisiones.md)):

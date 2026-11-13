@@ -7,6 +7,7 @@ Esta carpeta es la única fuente de documentación técnica de Xenomorfo-Q. Todo
 | Documento | Contenido |
 |---|---|
 | [propuesta.md](propuesta.md) | Propuesta del proyecto: problema, opción elegida, herramientas, alcance y plan de pruebas. |
+| [PropuestaDeProyectoFinal.pdf](PropuestaDeProyectoFinal.pdf) | Propuesta entregada al curso, en PDF (versión original; los cambios posteriores, como el proveedor del modelo, están en `decisiones.md`). |
 | [arquitectura.md](arquitectura.md) | Partes del sistema, flujo de una pregunta por el agente y ciclo con límite de llamadas. |
 | [contratos.md](contratos.md) | Interfaces acordadas: entorno, herramientas, agente y alienígena por reglas. |
 | [entorno.md](entorno.md) | Formato de mapas, salas, reglas de movimiento y captura, bot provisional y limitaciones actuales. |
@@ -18,7 +19,7 @@ Esta carpeta es la única fuente de documentación técnica de Xenomorfo-Q. Todo
 | [casos.md](casos.md) | Ejecutor de los 6 casos de prueba (apoyo a T21): uso, valores esperados y archivos de evidencia. |
 | [prediccion.md](prediccion.md) | Heurística de `predecir_destino` (T12): cómo decide, resultado y limitaciones. |
 
-El notebook de demostración (T24) está en [../notebooks/demo_directora.ipynb](../notebooks/demo_directora.ipynb).
+El notebook de demostración (T24) está en [../notebooks/demo_directora.ipynb](../notebooks/demo_directora.ipynb). El panel visual local (`python -m panel`, D16) se describe en la sección "Panel visual" del [README](../README.md#panel-visual); sus capturas están en [img/](img/panel.png).
 
 ## Cómo se mantiene
 
