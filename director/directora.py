@@ -75,7 +75,7 @@ class Directora:
             límite.
 
         Raises:
-            ClaveFaltanteError: Si no se pasó cliente y falta NVIDIA_API_KEY.
+            ClaveFaltanteError: Si no se pasó cliente y falta la clave del proveedor.
         """
         if self._cliente is None:
             self._cliente = crear_cliente(self.config)

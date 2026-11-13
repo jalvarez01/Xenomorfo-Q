@@ -51,7 +51,8 @@ class ClienteFalso:
 def sin_clave(monkeypatch):
     """Aísla las pruebas de la clave real y de cualquier .env local."""
     monkeypatch.setattr(llm, "_cargar_dotenv", lambda: None)
-    monkeypatch.delenv(llm.VAR_CLAVE, raising=False)
+    for nombre in (llm.VAR_PROVEEDOR, *llm.VARIABLES_CLAVE, llm.VAR_MODELO, llm.VAR_URL_BASE):
+        monkeypatch.delenv(nombre, raising=False)
 
 
 def test_estado_y_ruta_quedan_en_el_registro():
@@ -103,10 +104,10 @@ def test_la_partida_persiste_entre_preguntas():
 
 
 def test_sin_clave_no_falla_hasta_preguntar():
-    """Sin NVIDIA_API_KEY se puede crear la directora; preguntar sin cliente lanza ClaveFaltanteError."""
+    """Sin la clave se puede crear la directora; preguntar sin cliente lanza ClaveFaltanteError."""
     d = Directora()
     assert d.herramientas["estado_partida"]()["tick"] == 0
-    with pytest.raises(ClaveFaltanteError, match="NVIDIA_API_KEY"):
+    with pytest.raises(ClaveFaltanteError, match=llm.VAR_CLAVE):
         d.preguntar("¿Dónde está el tripulante?")
 
 

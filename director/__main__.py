@@ -5,7 +5,8 @@ Uso:
     python -m director            (modo interactivo: "salir" termina, "estado" muestra
                                    estado_partida sin usar el modelo)
 
-Si falta NVIDIA_API_KEY, muestra cómo configurarla y termina con código 2, sin traza.
+Si falta la clave del proveedor (OPENAI_API_KEY o NVIDIA_API_KEY, según XQ_PROVEEDOR), muestra
+cómo configurarla y termina con código 2, sin traza.
 
 Contenido principal:
     main: interpreta los argumentos y devuelve el código de salida.
