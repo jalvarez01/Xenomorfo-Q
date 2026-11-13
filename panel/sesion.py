@@ -5,11 +5,18 @@ modo "Tú" y las preguntas del chat usan la MISMA partida (directora.partida). T
 devuelve sale del código de la simulación y del agente; la sesión no simula nada por su
 cuenta.
 
+Niveles de dificultad (D19), solo en el panel: normal (todo por defecto, la partida de
+siempre), dificil (visión de 10 casillas y un paso extra al perseguir cada 3 ticks) y
+pesadilla (dificil más una pista automática hacia la sala real del tripulante tras 25
+ticks sin verlo, como máximo 3 por partida, aparte de las 3 de la directora).
+
 Ninguna respuesta incluye la clave del modelo ni el texto de errores de la API (que puede
 repetir parte de la clave): solo el nombre del error.
 
 Contenido principal:
     Sesion: mapa, estado, paso, mover, preguntar y reiniciar.
+    Nivel, NIVELES, NIVEL_POR_DEFECTO: los niveles de dificultad.
+    PistaAutomatica: la pista automática del nivel pesadilla.
     validar_pregunta: limpia una pregunta y rechaza las vacías o demasiado largas.
     rama_alien: rama activa del árbol del alienígena y su casilla objetivo, sin modificarlo.
     objetivo_alien: solo la casilla objetivo (para dibujar la ruta).
@@ -22,13 +29,17 @@ from __future__ import annotations
 
 import json
 import threading
+from dataclasses import dataclass
 from typing import Any
 
 from alien.reglas import PISTAS_POR_PARTIDA, AlienReglas
 from director.directora import Directora
 from director.llm import ClaveFaltanteError, ConfigLLM
 from director.partida import SEMILLA_POR_DEFECTO
-from sim.mapa import DIRS
+from director.partida import Partida
+from sim.env import EstacionEnv
+from sim.mapa import DIRS, SIN_SALA
+from sim.percepcion import ALCANCE_VISION
 from sim.rutas import ruta
 
 # Acción del entorno para cada dirección que manda el navegador (el orden de DIRS).
@@ -47,6 +58,87 @@ LARGO_REGISTRO = 40
 LARGO_RESULTADO = 160
 # Largo máximo de una pregunta, en caracteres; protege el servidor de cuerpos enormes.
 LARGO_PREGUNTA = 500
+
+
+@dataclass(frozen=True)
+class Nivel:
+    """Un nivel de dificultad del panel (D19).
+
+    Attributes:
+        nombre: Nombre visible.
+        alcance_vision: Alcance de la visión del alienígena, en casillas.
+        paso_extra_cada: Paso extra al perseguir cada tantos ticks, o None.
+        pista_auto_ticks: Ticks sin ver al tripulante tras los que llega una pista
+            automática, o None si el nivel no la tiene.
+        pista_auto_max: Pistas automáticas por partida.
+    """
+
+    nombre: str
+    alcance_vision: float = ALCANCE_VISION
+    paso_extra_cada: int | None = None
+    pista_auto_ticks: int | None = None
+    pista_auto_max: int = 0
+
+    def opciones_partida(self) -> dict:
+        """Parámetros de Partida que cambian; vacío en normal, así la partida es la de siempre."""
+        opciones = {}
+        if self.alcance_vision != ALCANCE_VISION:
+            opciones["alcance_vision"] = self.alcance_vision
+        if self.paso_extra_cada is not None:
+            opciones["paso_extra_cada"] = self.paso_extra_cada
+        return opciones
+
+
+# Niveles del panel, en el orden del selector. normal es la partida de siempre.
+NIVELES = {
+    "normal": Nivel("Normal"),
+    "dificil": Nivel("Difícil", alcance_vision=10, paso_extra_cada=3),
+    "pesadilla": Nivel("Pesadilla", alcance_vision=10, paso_extra_cada=3,
+                       pista_auto_ticks=25, pista_auto_max=3),
+}
+NIVEL_POR_DEFECTO = "normal"
+
+
+class PistaAutomatica:
+    """Pista automática del nivel pesadilla: una regla del panel, no de la directora.
+
+    Se engancha como Avance.tras_tick, así cuenta cada tick, también los que avanza la
+    directora con avanzar_simulacion. Si el alienígena pasa ticks_sin_ver ticks seguidos
+    sin ver al tripulante, le da una pista hacia la sala real del tripulante con
+    AlienReglas.dar_pista(sala, contar=False): no gasta las pistas de la directora y
+    lleva su propio presupuesto.
+
+    Args:
+        partida: La partida (para la sala del tripulante y el alienígena).
+        ticks_sin_ver: Ticks seguidos sin verlo antes de dar la pista.
+        maximo: Pistas automáticas por partida.
+
+    Attributes:
+        restantes: Pistas automáticas que quedan.
+        sin_ver: Ticks seguidos sin ver al tripulante.
+    """
+
+    def __init__(self, partida: Partida, ticks_sin_ver: int, maximo: int):
+        self.partida = partida
+        self.ticks_sin_ver = ticks_sin_ver
+        self.restantes = maximo
+        self.sin_ver = 0
+
+    def __call__(self, env: EstacionEnv, info: dict) -> list[str]:
+        """Cuenta el tick y, si toca, da la pista; devuelve el evento para el registro."""
+        if info.get("ve_tripulante"):
+            self.sin_ver = 0
+            return []
+        self.sin_ver += 1
+        if self.sin_ver < self.ticks_sin_ver or self.restantes == 0:
+            return []
+        sala = self.partida.ultima_sala_tripulante()
+        if sala == SIN_SALA:
+            return []
+        nombre = self.partida.alien.dar_pista(env.mapa.nombres_salas[sala], contar=False)["sala"]
+        self.restantes -= 1
+        self.sin_ver = 0
+        return [f"directora automática: pista hacia {nombre}"]
 
 
 def rama_alien(alien: AlienReglas) -> tuple[str, tuple[int, int]]:
@@ -122,9 +214,12 @@ class Sesion:
         cliente: Cliente del modelo (las pruebas pasan uno falso). None crea el real en la
             primera pregunta, con la clave del entorno.
         config: Configuración del modelo. None la lee del entorno.
+        nivel: Clave de NIVELES; por defecto "normal", la partida de siempre.
 
     Attributes:
         directora: La directora; directora.partida es la partida que se ve.
+        nivel: Clave del nivel actual.
+        pista_auto: La PistaAutomatica de la partida, o None si el nivel no la tiene.
         chat: Preguntas hechas en esta partida, con respuesta y llamadas.
         registro: Eventos del avance y llamadas del agente, en orden.
 
@@ -136,35 +231,51 @@ class Sesion:
     """
 
     def __init__(self, semilla: int = SEMILLA_POR_DEFECTO, cliente: Any = None,
-                 config: ConfigLLM | None = None):
+                 config: ConfigLLM | None = None, nivel: str = NIVEL_POR_DEFECTO):
         # Un solo candado: el navegador puede pedir un paso mientras el chat espera al
         # modelo, y la partida no se puede modificar desde dos hilos a la vez.
         self._candado = threading.RLock()
         self._cliente = cliente
         self._config = config
-        self.reiniciar(semilla)
+        self.nivel = NIVEL_POR_DEFECTO
+        self.reiniciar(semilla, nivel)
 
     # ------------------------------------------------------------------ API
-    def reiniciar(self, semilla: int = SEMILLA_POR_DEFECTO) -> dict:
+    def reiniciar(self, semilla: int = SEMILLA_POR_DEFECTO, nivel: str | None = None) -> dict:
         """Empieza una partida nueva y vacía el chat y el registro.
 
         Args:
             semilla: Semilla de la partida.
+            nivel: Clave de NIVELES. None conserva el nivel actual.
 
         Returns:
             El estado de la partida nueva.
 
         Raises:
-            ValueError: Si la semilla no es un entero.
+            ValueError: Si la semilla no es un entero o el nivel no existe.
         """
         if not isinstance(semilla, int) or isinstance(semilla, bool):
             raise ValueError("La semilla debe ser un número entero.")
+        if nivel is not None and nivel not in NIVELES:
+            raise ValueError(f"Nivel desconocido: {nivel!r}. Usa uno de: {', '.join(NIVELES)}.")
         with self._candado:
-            self.directora = Directora(semilla=semilla, cliente=self._cliente, config=self._config)
+            if nivel is not None:
+                self.nivel = nivel
+            datos = NIVELES[self.nivel]
+            self.directora = Directora(semilla=semilla, cliente=self._cliente, config=self._config,
+                                       opciones_partida=datos.opciones_partida())
+            self.pista_auto = None
+            if datos.pista_auto_ticks is not None:
+                self.pista_auto = PistaAutomatica(self.directora.partida, datos.pista_auto_ticks,
+                                                  datos.pista_auto_max)
+                self.directora.partida.avance.tras_tick = self.pista_auto
             self.chat: list[dict] = []
             self.registro: list[dict] = []
             self._eventos_vistos = 0
-            self._anotar("sistema", f"partida nueva con semilla {semilla}")
+            texto = f"partida nueva con semilla {semilla}"
+            if self.nivel != NIVEL_POR_DEFECTO:
+                texto += f", nivel {datos.nombre.lower()}"
+            self._anotar("sistema", texto)
             return self.estado()
 
     def mapa(self) -> dict:
@@ -218,6 +329,12 @@ class Sesion:
                 "distancia": None if camino is None else len(camino) - 1,
                 "pistas_restantes": alien.pistas_restantes,
                 "pistas_max": PISTAS_POR_PARTIDA,
+                "nivel": self.nivel,
+                "nivel_texto": NIVELES[self.nivel].nombre,
+                "niveles": {clave: n.nombre for clave, n in NIVELES.items()},
+                "alcance_vision": env.alcance_vision,
+                "pistas_auto_restantes": 0 if self.pista_auto is None else self.pista_auto.restantes,
+                "pistas_auto_max": NIVELES[self.nivel].pista_auto_max,
                 "pista_activa": alien.pista_activa,
                 "vision": vision,
                 "ruta": [list(c) for c in ruta_prevista],
