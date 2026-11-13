@@ -122,3 +122,10 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Qué no muestra:** el mock visual de la fase de diseño tenía creencia bayesiana, propagación de ruido, un medidor de tensión del director, escondites en casilleros y una fase con DQN. No se muestran porque no están implementados en la simulación ni en el agente (D8 dejó fuera el DQN); el panel no inventa datos que el código no calcula.
 - **Alternativas descartadas:** un framework web o una biblioteca de gráficos (dependencias nuevas a días de la entrega); portar la simulación del mock a JavaScript (mostraría un comportamiento distinto al del código real).
 
+
+## D17. Versión máxima del cliente de OpenAI
+
+- **Fecha:** 2026-11-12
+- **Decisión:** `requirements.txt` fija `openai>=1.40,<3`. Con la regla anterior (`openai>=1.40`), una instalación limpia trae la serie 3.x.
+- **Motivo:** en una máquina del equipo, `import openai` falló con la serie 3.x hasta recrear el entorno virtual. En entornos limpios no se reprodujo: con 2.54.0 y con 3.50.0 pasan las pruebas y una pregunta real al modelo responde bien. La serie 2.x queda verificada para la entrega y el tope evita saltar de serie sin probarla.
+- **Alternativas descartadas:** dejar el requisito abierto (cada instalación puede traer una serie distinta a la verificada); fijar una versión exacta (impide recibir correcciones de la serie 2.x).
