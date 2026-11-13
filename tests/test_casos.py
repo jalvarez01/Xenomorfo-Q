@@ -13,7 +13,7 @@ from director.llm import ConfigLLM
 from director.partida import Partida
 from director.prompt import PROMPT_VERSION
 from experiments import casos
-from experiments.casos import CASOS, calcular_esperado, ejecutar_casos
+from experiments.casos import CASOS, calcular_esperado, comparar, ejecutar_casos, sugerir_valoracion
 from tests.test_directora import ClienteFalso, pide, texto
 
 # Valor de clave falso para comprobar que nunca llega a los archivos. No tiene la forma
@@ -101,7 +101,7 @@ def test_escribe_json_y_markdown_con_todos_los_campos(tmp_path):
     assert informe["modelo"] == ConfigLLM().modelo and informe["semilla"] == 42
     campos = {"id", "categoria", "pregunta", "herramientas_esperadas", "semilla_caso", "resultado_esperado",
               "respuesta", "llamadas", "numero_llamadas", "limite_alcanzado",
-              "latencia_segundos", "valoracion", "correcto"}
+              "latencia_segundos", "comparacion", "valoracion_sugerida", "valoracion", "correcto"}
     for caso in informe["casos"]:
         assert set(caso) - {"preparacion"} == campos
         assert caso["valoracion"] == "" and caso["correcto"] is None
@@ -155,3 +155,72 @@ def test_comando_con_cliente_falso(monkeypatch, tmp_path, capsys):
     assert casos.main(["--semilla", "42", "--salida", str(tmp_path)]) == 0
     assert "Resultados en" in capsys.readouterr().out
     assert len(list(tmp_path.glob("casos_*.json"))) == 1
+
+
+# --- Comparación automática con respuestas reales del modelo (prueba del 2026-11-12) ---------
+
+
+def test_comparar_c1_correcto():
+    """La respuesta real de C1 menciona Bodega y 15 pasos: los dos datos coinciden."""
+    respuesta = "El tripulante está en **Bodega**.\n\nEl alienígena está a **15 pasos/casillas** del tripulante."
+    comparacion = comparar("C1", calcular_esperado("C1"), respuesta, [], False)
+    assert [d["coincide"] for d in comparacion] == [True, True]
+    assert sugerir_valoracion(CASOS[0], comparacion, []).startswith("correcto")
+
+
+def test_comparar_c4_antes_del_ajuste_es_parcial():
+    """La respuesta real de C4 con el prompt 1 no daba la distancia inicial ni decía si se acercó."""
+    respuesta = ("Listo: pista dada hacia **Bodega**. Quedan **2** pistas.\n\nAvancé **10 ticks**. "
+                 "Ahora mismo, **no lo ve** (distancia: **6 casillas**).")
+    comparacion = comparar("C4", calcular_esperado("C4"), respuesta, [], False)
+    fallan = [d["dato"] for d in comparacion if not d["coincide"]]
+    assert fallan == ["pasos antes", "se acercó"]
+    assert sugerir_valoracion(CASOS[3], comparacion, []).startswith("parcial")
+
+
+def test_comparar_c4_despues_del_ajuste_es_correcto():
+    """La respuesta real de C4 con el prompt 2 compara 15 y 6 y dice que sí se acercó."""
+    respuesta = ("Pista dada hacia **Bodega**; quedan **2** pistas.\n\n¿Se acercó? **Sí**: la distancia "
+                 "pasó de **15** casillas (antes) a **6** casillas (después).")
+    assert all(d["coincide"] for d in comparar("C4", calcular_esperado("C4"), respuesta, [], False))
+
+
+def test_comparar_c5_detecta_una_ruta_inventada():
+    """Si el modelo calcula una ruta en vez de reportar la sala inexistente, C5 queda incorrecto."""
+    llamadas = [{"herramienta": "ruta_mas_corta", "error": False}]
+    comparacion = comparar("C5", calcular_esperado("C5"), "Hay **20 pasos** desde **Médico** hasta **Hangar**.",
+                           llamadas, False)
+    assert not any(d["coincide"] for d in comparacion)
+    assert sugerir_valoracion(CASOS[4], comparacion, llamadas).startswith("incorrecto")
+
+
+def test_comparar_c6_solo_compara_lo_informado():
+    """En C6 se comparan las distancias que la respuesta informa; las cortadas por el límite no cuentan."""
+    respuesta = ("- Médico: **0** pasos\n- Laboratorio: **8** pasos\n- Bodega: no consultado\n"
+                 "Alcancé el límite de llamadas a herramientas.")
+    comparacion = comparar("C6", calcular_esperado("C6"), respuesta, [], True)
+    assert [d["dato"] for d in comparacion] == ["alcanza el límite", "dice que alcanzó el límite",
+                                                 "pasos a Médico", "pasos a Laboratorio"]
+    assert all(d["coincide"] for d in comparacion)
+
+
+def test_comparar_c6_ignora_el_conteo_de_salas_faltantes():
+    """La frase real 'Para las otras 3 salas (Bodega, Reactor, Hangar)' no se lee como distancia."""
+    respuesta = ("- **Corredor B**: 14 pasos (camino: Médico → puerta → Laboratorio → Corredor B)\n\n"
+                 "Para las otras 3 salas (**Bodega**, **Reactor**, **Hangar**) **no se pudo calcular** "
+                 "porque se alcanzó el límite de llamadas a herramientas.")
+    comparacion = comparar("C6", calcular_esperado("C6"), respuesta, [], True)
+    assert [d["dato"] for d in comparacion][2:] == ["pasos a Corredor B"]
+    assert all(d["coincide"] for d in comparacion)
+
+
+def test_recomparar_no_llama_al_modelo(tmp_path):
+    """recomparar rehace la comparación desde el JSON guardado, sin cliente."""
+    ruta_json, ruta_md = ejecutar_casos(salida=tmp_path, cliente=ClienteFalso(guion()), config=ConfigLLM())
+    informe = json.loads(ruta_json.read_text(encoding="utf-8"))
+    informe["casos"][0]["comparacion"] = []
+    ruta_json.write_text(json.dumps(informe, ensure_ascii=False), encoding="utf-8")
+    casos.recomparar(ruta_json)
+    rehecho = json.loads(ruta_json.read_text(encoding="utf-8"))
+    assert len(rehecho["casos"][0]["comparacion"]) == 2
+    assert "Comparación automática" in ruta_md.read_text(encoding="utf-8")
