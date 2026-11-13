@@ -29,6 +29,62 @@ Cómo cumple la opción B:
 - **Límite de llamadas:** como máximo 6 herramientas ejecutadas por pregunta. Al llegar al límite, las llamadas que sobran no se ejecutan y el modelo responde una última vez sin herramientas, diciendo que alcanzó el límite (decisión D9 en [docs/decisiones.md](docs/decisiones.md)).
 - **Registro:** cada llamada queda registrada con la herramienta, los argumentos, el resultado y el tiempo; `python -m director --registro` y el notebook lo muestran.
 
+## Metodología
+
+1. **Preparación:** se carga el mapa Vela-9 y se crea una partida nueva con semilla fija (42 por defecto).
+2. **Modelo:** la pregunta en español, el prompt de sistema (versión 2, `director/prompt.py`) y los esquemas de las 6 herramientas (`director/esquemas.py`) se envían al proveedor configurado: OpenAI con `gpt-5.4-nano` por defecto, o NVIDIA NIM con `openai/gpt-oss-20b` (D15). El cliente es la biblioteca `openai`, limitada a la serie 2.x (D17), con temperatura 0. El modelo no se entrena en este proyecto.
+3. **Ejecución:** el ciclo del agente (`director/agente.py`, basado en `run_agent_with_budget` de Lecture11) ejecuta las herramientas que pide el modelo sobre la misma partida, le devuelve los resultados y registra cada llamada. Cuenta las herramientas ejecutadas, no los turnos: con 6 ya ejecutadas, las que sobran no se ejecutan y el modelo responde una última vez sin herramientas, diciendo que alcanzó el límite (D9).
+4. **Evaluación:** el resultado esperado de cada caso se calcula llamando a las herramientas directamente, sin el modelo, sobre una partida nueva igual a la del caso (semilla 42; C3 usa la preparación semilla 0 y 11 ticks). La respuesta se contrasta con ese valor: una comparación automática busca los datos esperados en el texto y la valoración final es manual. También se revisan las herramientas y los argumentos usados, los errores y si se alcanzó el límite.
+5. **Salida:** la respuesta llega al usuario por el comando `python -m director`, el notebook o el panel (D16). El ejecutor de casos guarda la evidencia en JSON y Markdown en `experiments/resultados/`.
+
+Las distancias son rutas A* sobre la grilla y `predecir_destino` analiza los últimos 10 ticks del tripulante. La referencia es el estado real de la simulación, no un benchmark externo: sirve para contrastar las respuestas con la partida, pero usa las mismas herramientas del proyecto, así que no es una implementación independiente.
+
+**Flujo metodológico**
+
+```mermaid
+flowchart LR
+    A["Mapa Vela-9 y semilla"] --> B["Partida"]
+    P["Pregunta en español: comando, notebook o panel"] --> C["Directora y ciclo del agente"]
+    C --> E["Proveedor del LLM: OpenAI por defecto o NVIDIA NIM"]
+    E -->|"pide herramientas"| C
+    C -->|"ejecuta, máximo 6"| D["6 herramientas"]
+    D -->|"consulta o modifica"| B
+    D -->|"resultado y registro"| C
+    E -->|"respuesta final"| F["Usuario"]
+    B --> G["Resultado esperado: herramientas sin el modelo"]
+    F --> H["Comparación automática, valoración manual, JSON y Markdown"]
+    G --> H
+```
+
+**Diagrama de secuencia de una pregunta**
+
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant E as Comando, notebook o panel
+    participant A as Directora y ciclo del agente
+    participant N as Proveedor del LLM
+    participant H as Herramientas
+    participant S as Simulación Vela-9
+    U->>E: Pregunta en español
+    E->>A: Pregunta
+    loop Hasta que el modelo responda en texto
+        A->>N: Prompt v2, mensajes y 6 esquemas
+        N-->>A: Pide herramientas
+        A->>H: Herramienta y argumentos
+        H->>S: Consulta o modifica la partida
+        S-->>H: Estado, ruta o eventos
+        H-->>A: Resultado, queda en el registro
+    end
+    opt Se ejecutaron 6 herramientas
+        A->>N: Última llamada sin herramientas
+    end
+    N-->>A: Respuesta final
+    A-->>E: Respuesta y registro de llamadas
+    E-->>U: Respuesta
+    Note over A,N: Máximo 6 herramientas ejecutadas por pregunta
+```
+
 ## Instrucciones de ejecución
 
 ### En local
@@ -81,6 +137,16 @@ Escucha solo en `127.0.0.1`, no usa nada de internet salvo la llamada al modelo 
 ![Panel en modo Tú después de unos movimientos, semilla 42, a 1440x900](docs/img/panel.png)
 
 A 1440x900 y a 1366x768 la caja de pregunta y la respuesta más reciente quedan al lado del mapa sin desplazar la página; el historial se desplaza dentro del panel del chat. Después de preguntar C4 en el chat, el mapa muestra la pista hacia Bodega y el avance de 10 ticks: [captura del chat](docs/img/panel_chat.png). La respuesta de esa captura salió parcial (no comparó la distancia antes y después), la misma variación de C4 que se describe en el análisis.
+
+## Panel en línea
+
+El panel también se puede publicar en internet, en una instancia EC2 de AWS con Ubuntu 24.04 detrás de Caddy (decisión D18). La guía paso a paso está en [docs/despliegue.md](docs/despliegue.md) y los archivos en [deploy/](deploy/).
+
+- Caddy es lo único que escucha en internet: da HTTPS con un dominio `<ip>.sslip.io` y pide usuario y contraseña en todo salvo `/salud`. El panel sigue escuchando solo en `127.0.0.1`.
+- Cada visitante tiene su propia partida, por una cookie de sesión: como máximo 30 sesiones, que duran 30 minutos sin uso.
+- El chat tiene cupos para acotar el costo del modelo: 20 preguntas por sesión y 60 por hora en todo el servidor (`XQ_PANEL_MAX_SESION`, `XQ_PANEL_MAX_HORA`; 0 desactiva). Pasado un cupo, el chat avisa y el mapa y el modo Tú siguen funcionando. En local rigen los mismos cupos.
+- `GET /salud` responde `{"ok": true}` para comprobar que el servicio está vivo, y `python -m panel` toma el puerto de `PORT` si no se pasa `--puerto`.
+- La clave del modelo vive solo en `/etc/xenomorfo-q.env` del servidor, con permisos 600.
 
 ## Configuración de la clave
 
@@ -156,6 +222,7 @@ Resumen: 5 de 6 correctos y C4 parcial. Las latencias fueron de 1.5 a 4.9 s por 
 - [Entorno](docs/entorno.md): mapas, salas, reglas, bot provisional y limitaciones de la versión 0.
 - [Decisiones](docs/decisiones.md): registro de decisiones de diseño.
 - [Guía de desarrollo](docs/guia-desarrollo.md): instalación, ramas, PR, claves de API y estándar de documentación.
+- [Despliegue](docs/despliegue.md): el panel en una instancia EC2 de AWS detrás de Caddy.
 
 ## Flujo de trabajo
 

@@ -129,3 +129,20 @@ Cada entrada registra una decisión de diseño. Las decisiones nuevas van al fin
 - **Decisión:** `requirements.txt` fija `openai>=1.40,<3`. Con la regla anterior (`openai>=1.40`), una instalación limpia trae la serie 3.x.
 - **Motivo:** en una máquina del equipo, `import openai` falló con la serie 3.x hasta recrear el entorno virtual. En entornos limpios no se reprodujo: con 2.54.0 y con 3.50.0 pasan las pruebas y una pregunta real al modelo responde bien. La serie 2.x queda verificada para la entrega y el tope evita saltar de serie sin probarla.
 - **Alternativas descartadas:** dejar el requisito abierto (cada instalación puede traer una serie distinta a la verificada); fijar una versión exacta (impide recibir correcciones de la serie 2.x).
+
+## D18. Panel en línea en una instancia EC2 detrás de Caddy
+
+- **Fecha:** 2026-11-13
+- **Decisión:** el panel se puede publicar en una sola instancia EC2 (`t3.micro`, Ubuntu 24.04) con Caddy delante. Los archivos están en `deploy/` y la guía en `docs/despliegue.md`.
+  - **Red:** Caddy es lo único que escucha en internet. Da HTTPS con un dominio `<ip>.sslip.io` y pide usuario y contraseña en todo salvo `/salud`.
+  - **Panel:** sigue escuchando solo en 127.0.0.1, como servicio systemd con un usuario sin privilegios.
+  - **Sesiones:** cada visitante tiene su propia partida, por una cookie aleatoria (HttpOnly, SameSite=Lax y Secure si Caddy avisa que la petición llegó por HTTPS). Hay como máximo 30 sesiones en memoria, cada una dura 30 minutos sin uso y, con el almacén lleno, se descarta la menos usada.
+  - **Cupos del chat:** 20 preguntas por sesión y 60 por hora en todo el servidor (`XQ_PANEL_MAX_SESION`, `XQ_PANEL_MAX_HORA`). Pasado un cupo, el chat responde 429 con un aviso y lo demás sigue funcionando.
+  - **Puerto:** `--puerto` también se toma de `PORT`.
+  - **`/salud`:** responde `{"ok": true}`.
+- **Motivo:** mostrar el panel fuera de la red local sin exponer la clave del modelo ni dejar que cualquiera gaste crédito. El usuario y la contraseña cierran el acceso, y los cupos acotan el costo aunque alguien entre o borre su cookie para tener una sesión nueva. Con una partida por visitante, dos personas no se mueven la partida la una a la otra.
+- **En local:** `python -m panel` se comporta igual que antes. La única diferencia visible es el cupo de 20 preguntas por sesión, que se quita con `XQ_PANEL_MAX_SESION=0`.
+- **Alternativas descartadas:**
+  - un servicio administrado (App Runner, Elastic Beanstalk): más piezas y costo para una demostración;
+  - exponer el panel directamente en el puerto 8000: sin HTTPS ni contraseña;
+  - guardar las sesiones en disco o en una base de datos: no hace falta para una demostración y obliga a pensar en datos de visitantes.
