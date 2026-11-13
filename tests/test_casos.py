@@ -10,6 +10,7 @@ import pytest
 
 from director import llm
 from director.llm import ConfigLLM
+from director.prompt import PROMPT_VERSION
 from experiments import casos
 from experiments.casos import CASOS, calcular_esperado, ejecutar_casos
 from tests.test_directora import ClienteFalso, pide, texto
@@ -67,7 +68,7 @@ def test_escribe_json_y_markdown_con_todos_los_campos(tmp_path):
     ruta_json, ruta_md = ejecutar_casos(salida=tmp_path, cliente=ClienteFalso(guion()),
                                         config=ConfigLLM())
     assert ruta_json.exists() and ruta_md.exists()
-    assert "prompt1" in ruta_json.name and "semilla42" in ruta_json.name
+    assert f"prompt{PROMPT_VERSION}" in ruta_json.name and "semilla42" in ruta_json.name
     informe = json.loads(ruta_json.read_text(encoding="utf-8"))
     assert set(informe) == {"fecha", "prompt_version", "modelo", "temperatura", "semilla",
                             "limite", "casos"}
